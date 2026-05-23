@@ -28,6 +28,14 @@ export const RoutineRunner = ({ programId }: { programId: string }) => {
     }
   );
 
+  const getNextExerciseName = () => {
+    const nextProgramData = programExercises[index + 1];
+    if (!nextProgramData) return "Done";
+    const nextEx = library.find(e => e.id === nextProgramData.exerciseId);
+    if (!nextEx) return "Done";
+    return `${nextEx.name} ${nextProgramData.side ? `(${nextProgramData.side})` : ''}`;
+  };
+
   return (
     <div className="flex flex-col items-center p-6 gap-6 text-white">
       <div className="text-center">
@@ -35,11 +43,13 @@ export const RoutineRunner = ({ programId }: { programId: string }) => {
           {isBreak ? "Break" : `Exercise ${index + 1} of ${programExercises.length}`}
         </p>
         <h1 className="text-3xl font-bold">
-          {isBreak 
-            ? "Next: " + (library.find(e => e.id === programExercises[index+1]?.exerciseId)?.name || "Done") 
-            : currentExerciseData.name}
+          {isBreak ? `Next: ${getNextExerciseName()}` : currentExerciseData.name}
         </h1>
-        {!isBreak && <p className="text-emerald-500 text-sm mt-1">{currentExerciseData.bodyRegion} | Rating: {currentExerciseData.rating}/5</p>}
+        {!isBreak && currentProgramData.side && (
+          <h2 className="text-2xl font-bold text-emerald-500 mt-2">
+            Seite: {currentProgramData.side}
+          </h2>
+        )}
       </div>
 
       <div className="text-[120px] font-mono font-bold leading-none">{timeLeft}</div>
