@@ -38,9 +38,7 @@ interface AppState {
 export const useStore = create<AppState>()(
   persist(
     (set) => ({
-      library: [
-        { id: '1', name: 'Hüftbeuger', bodyRegion: 'Hüfte', rating: 3, isUnilateral: true },
-      ],
+      library: [{ id: '1', name: 'Hüftbeuger', bodyRegion: 'Hüfte', rating: 3, isUnilateral: true }],
       programs: [],
       addExercise: (ex) => set((state) => ({ library: [...state.library, ex] })),
       updateExercise: (id, updatedEx) => set((state) => ({
@@ -61,6 +59,6 @@ export const useStore = create<AppState>()(
         programs: state.programs.filter((p) => p.id !== id)
       })),
     }),
-    { name: 'stretch-storage-v8' }
+    { name: 'stretch-storage-v9' }
   )
 );
