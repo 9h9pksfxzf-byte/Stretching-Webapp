@@ -2,15 +2,17 @@ import { useState } from 'react';
 import { useStore } from '../store/useStore';
 import { useTimer } from '../hooks/useTimer';
 
-export const RoutineRunner = ({ programType }: { programType: 'kurz' | 'mittel' | 'lang' }) => {
+export const RoutineRunner = ({ programId }: { programId: string }) => {
   const { library, programs } = useStore();
   const [index, setIndex] = useState<number>(0);
   const [isBreak, setIsBreak] = useState<boolean>(false);
 
-  const programIds = programs[programType];
+  // Finde das Programm und dessen Übungen
+  const program = programs.find(p => p.id === programId);
+  const programIds = program ? program.exerciseIds : [];
   const current = library.find(e => e.id === programIds[index]);
 
-  if (!current) return <div className="p-10 text-center text-2xl text-white">Session Complete!</div>;
+  if (!current || !program) return <div className="p-10 text-center text-2xl text-white">Session Complete!</div>;
 
   const { timeLeft, isActive, toggle, skip } = useTimer(
     isBreak ? current.breakDuration : current.duration, 
@@ -46,4 +48,5 @@ export const RoutineRunner = ({ programType }: { programType: 'kurz' | 'mittel' 
       </div>
     </div>
   );
+};
 };
