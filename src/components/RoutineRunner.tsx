@@ -12,7 +12,6 @@ export const RoutineRunner = ({ programId, onClose }: RoutineRunnerProps) => {
   const [index, setIndex] = useState<number>(0);
   const [isBreak, setIsBreak] = useState<boolean>(false);
   
-  // Zustände für die Ausführungsbewertung und den Session-Speicher
   const [showRatingScreen, setShowRatingScreen] = useState<boolean>(false);
   const [completedExercises, setCompletedExercises] = useState<PerformedExercise[]>([]);
 
@@ -21,26 +20,20 @@ export const RoutineRunner = ({ programId, onClose }: RoutineRunnerProps) => {
   const currentProgramData = programExercises[index];
   const currentExerciseData = library.find(e => e.id === currentProgramData?.exerciseId);
 
-  // Bestimmung der aktuellen Dauer für die Hook
   const currentDuration = isBreak 
     ? (currentProgramData?.breakDuration || 0) 
     : (currentProgramData?.duration || 0);
 
-  // Wir übergeben eine leere Dummy-Funktion () => {} als zweiten Parameter,
-  // damit TypeScript auf Vercel nicht wegen fehlender Argumente meckert.
+  // Dummy-Callback, da deine Hook 2 Argumente erzwingt
   const { timeLeft, isActive, toggle, skip } = useTimer(currentDuration, () => {});
 
-  // ZENTRALE STEUERUNG: Sobald timeLeft auf 0 sinkt (egal ob durch Ablauf oder Skip),
-  // fangen wir das hier im React-Lebenszyklus sauber ab.
+  // VERBESSERTER MECHANISMUS: Wir lauschen NUR noch auf timeLeft === 0.
+  // Unabhängig davon, ob isActive true oder false ist.
   useEffect(() => {
-    if (timeLeft === 0 && isActive) {
-      // Eine winzige Verzögerung verhindert Race-Conditions beim State-Update
-      const timer = setTimeout(() => {
-        handlePhaseEnd();
-      }, 50);
-      return () => clearTimeout(timer);
+    if (timeLeft === 0) {
+      handlePhaseEnd();
     }
-  }, [timeLeft, isActive]);
+  }, [timeLeft]);
 
   const handlePhaseEnd = () => {
     if (isBreak) {
@@ -48,20 +41,18 @@ export const RoutineRunner = ({ programId, onClose }: RoutineRunnerProps) => {
       setIsBreak(false);
       setIndex((i) => i + 1);
     } else {
-      // Aktive Übung vorbei -> Rating erzwingen
+      // Aktive Übung vorbei -> Rating anzeigen!
       setShowRatingScreen(true);
     }
   };
 
-  // Skip-Button triggert nun die offizielle Hook-Skip-Funktion.
-  // Falls deine Hook bei Skip den timeLeft-State nicht auf 0 setzt,
-  // rufen wir handlePhaseEnd() hier zur Sicherheit zusätzlich direkt auf.
+  // Ersetzt das fehlerhafte Skip. Wir zwingen die App in die nächste Phase
+  // und rufen das originale Skip auf, um den Hook-Timer zurückzusetzen.
   const handleManualSkip = () => {
     handlePhaseEnd();
     skip(); 
   };
 
-  // Verarbeitet die Vergabe des 1-10 Ratings nach einer aktiven Übung
   const handleRatingSelection = (ratingValue: number) => {
     if (!currentProgramData || !currentExerciseData) return;
 
@@ -78,7 +69,6 @@ export const RoutineRunner = ({ programId, onClose }: RoutineRunnerProps) => {
     setCompletedExercises(updatedExercises);
     setShowRatingScreen(false);
 
-    // Prüfen, ob die Routine komplett beendet ist
     if (index >= programExercises.length - 1) {
       if (program) {
         addHistoryEntry({
@@ -97,12 +87,10 @@ export const RoutineRunner = ({ programId, onClose }: RoutineRunnerProps) => {
       }
       setIndex((i) => i + 1);
     } else {
-      // Wenn noch Übungen anstehen -> Wechsel in die Pause
       setIsBreak(true);
     }
   };
 
-  // Abschluss-Bildschirm nach dem vollständigen Programm-Durchlauf
   if (!currentProgramData || !currentExerciseData || !program) {
     return (
       <div className="flex flex-col items-center justify-center p-6 h-screen text-white gap-8 -mt-10">
@@ -133,7 +121,7 @@ export const RoutineRunner = ({ programId, onClose }: RoutineRunnerProps) => {
   // INTERFACE 1: BEWERTUNGS-MODAL (1-10)
   if (showRatingScreen) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen bg-[#0a0a0a] text-white p-6 gap-6">
+      <div className="flex flex-col items-center justify-center min-h-screen bg-[#0a0a0a] text-white p-6 gap-6 absolute inset-0 z-50">
         <div className="text-center mb-4">
           <p className="text-emerald-500 uppercase tracking-widest text-xs mb-2">Reflexion</p>
           <h2 className="text-2xl font-bold mb-1">Wie gut war deine Ausführung?</h2>
@@ -147,7 +135,7 @@ export const RoutineRunner = ({ programId, onClose }: RoutineRunnerProps) => {
             <button
               key={num}
               onClick={() => handleRatingSelection(num)}
-              className="py-4 bg-[#1a1a1a] border border-[#333] rounded-xl font-bold text-lg active:bg-emerald-600 shadow-sm"
+              className="py-4 bg-[#1a1a1a] border border-[#333] rounded-xl font-bold text-lg active:bg-emerald-600 shadow-sm text-white"
             >
               {num}
             </button>
@@ -180,7 +168,6 @@ export const RoutineRunner = ({ programId, onClose }: RoutineRunnerProps) => {
 
       <div className="text-[120px] font-mono font-bold leading-none my-6">{timeLeft}</div>
 
-      {/* Übungsbeschreibung: Sichtbar während der Dehnung */}
       {!isBreak && currentExerciseData.description && (
         <div className="bg-[#1a1a1a] border border-[#333] p-4 rounded-xl text-sm text-slate-300 max-w-md w-full text-center overflow-y-auto max-h-32 shadow-inner">
           {currentExerciseData.description}
