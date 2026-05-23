@@ -11,7 +11,8 @@ export const useTimer = (initialTime: number, onComplete: () => void) => {
   }, [initialTime]);
 
   useEffect(() => {
-    let interval: NodeJS.Timeout | null = null;
+    // Verwendung von return type 'any' oder window.setInterval ID um NodeJS Namespace Fehler zu umgehen
+    let interval: any = null;
 
     if (isActive && timeLeft > 0) {
       interval = setInterval(() => {
@@ -32,7 +33,7 @@ export const useTimer = (initialTime: number, onComplete: () => void) => {
   const skip = useCallback(() => {
     setIsActive(false);
     setTimeLeft(0);
-    onComplete(); // Löst den Phasenwechsel im RoutineRunner auch beim Überspringen aus
+    onComplete(); // Löst den Phasenwechsel im RoutineRunner aus
   }, [onComplete]);
 
   return { timeLeft, isActive, toggle, skip };
