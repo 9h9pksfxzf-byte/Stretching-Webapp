@@ -2,7 +2,17 @@
 @tailwind components;
 @tailwind utilities;
 
-body {
-  margin: 0;
-  background-color: #0f172a; /* Tailwind slate-900 */
+@layer base {
+  body {
+    @apply bg-[#0a0a0a] text-white font-sans;
+  }
+}
+
+@layer components {
+  .btn-card {
+    @apply flex flex-col items-center justify-center p-4 bg-[#1a1a1a] rounded-2xl border border-[#333] transition-all hover:border-emerald-500 active:scale-95;
+  }
+  .btn-action {
+    @apply py-6 rounded-2xl font-bold text-lg flex items-center justify-center transition-all;
+  }
 }
