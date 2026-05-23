@@ -7,7 +7,6 @@ export const RoutineRunner = ({ programId }: { programId: string }) => {
   const [index, setIndex] = useState<number>(0);
   const [isBreak, setIsBreak] = useState<boolean>(false);
 
-  // Finde das Programm und dessen Übungen
   const program = programs.find(p => p.id === programId);
   const programIds = program ? program.exerciseIds : [];
   const current = library.find(e => e.id === programIds[index]);
@@ -48,5 +47,4 @@ export const RoutineRunner = ({ programId }: { programId: string }) => {
       </div>
     </div>
   );
-};
 };
