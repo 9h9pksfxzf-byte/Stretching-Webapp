@@ -2,15 +2,17 @@ import { useState } from 'react';
 import { RoutineRunner } from './components/RoutineRunner';
 import { ProgramGrid } from './components/ProgramGrid';
 import { BottomNav } from './components/BottomNav';
+import { ProgramBuilder } from './components/ProgramBuilder';
+
+type ViewState = 'menu' | 'active' | 'build';
 
 export default function App() {
-  const [view, setView] = useState<'menu' | 'active'>('menu');
-  const [program, setProgram] = useState<'kurz' | 'mittel' | 'lang'>('kurz');
+  const [view, setView] = useState<ViewState>('menu');
+  const [activeProgramId, setActiveProgramId] = useState<string>('');
 
   return (
     <div className="bg-[#0a0a0a] min-h-screen text-white pb-24">
-      {view === 'active' ? (
-        // Active Training View
+      {view === 'active' && (
         <div className="relative">
           <button 
             onClick={() => setView('menu')} 
@@ -18,18 +20,28 @@ export default function App() {
           >
             ← Back
           </button>
-          <RoutineRunner programType={program} />
+          <RoutineRunner programId={activeProgramId} />
         </div>
-      ) : (
-        // Menu View
+      )}
+
+      {view === 'build' && (
+        <ProgramBuilder onClose={() => setView('menu')} />
+      )}
+
+      {view === 'menu' && (
         <main className="p-6">
           <header className="flex justify-between items-center mb-8">
             <h1 className="text-2xl font-bold">My Stretch Library</h1>
-            <button className="text-2xl">+</button>
+            <button 
+              onClick={() => setView('build')} 
+              className="text-3xl text-emerald-500 font-light"
+            >
+              +
+            </button>
           </header>
           
-          <ProgramGrid onSelect={(type) => { 
-            setProgram(type); 
+          <ProgramGrid onSelect={(id) => { 
+            setActiveProgramId(id); 
             setView('active'); 
           }} />
 
@@ -40,7 +52,6 @@ export default function App() {
         </main>
       )}
 
-      {/* Die BottomNav soll im Menü-Modus immer sichtbar sein */}
       {view === 'menu' && <BottomNav />}
     </div>
   );
