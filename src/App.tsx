@@ -16,7 +16,6 @@ export default function App() {
   
   const library = useStore(state => state.library);
 
-  // Gruppierung der Bibliothek nach Körperregion mittels reduce
   const groupedLibrary = library.reduce((acc, ex) => {
     const region = ex.bodyRegion || 'Sonstige';
     if (!acc[region]) acc[region] = [];
@@ -24,7 +23,6 @@ export default function App() {
     return acc;
   }, {} as Record<string, Exercise[]>);
 
-  // --- OVERLAYS (verdecken die gesamte App inkl. Navigation) ---
   if (overlay === 'active') {
     return (
       <div className="bg-[#0a0a0a] min-h-screen text-white relative">
@@ -47,12 +45,10 @@ export default function App() {
     return <div className="bg-[#0a0a0a] min-h-screen"><ExerciseBuilder onClose={() => setOverlay('none')} /></div>;
   }
 
-  // --- HAUPT-TABS ---
   return (
     <div className="bg-[#0a0a0a] min-h-screen text-white pb-24">
       <main className="p-6">
         
-        {/* START-BILDSCHIRM */}
         {currentTab === 'home' && (
           <section>
             <header className="flex justify-between items-center mb-8">
@@ -71,7 +67,6 @@ export default function App() {
           </section>
         )}
 
-        {/* BIBLIOTHEK */}
         {currentTab === 'library' && (
           <section>
             <header className="flex justify-between items-center mb-8">
@@ -95,7 +90,9 @@ export default function App() {
                       <div key={ex.id} className="bg-[#1a1a1a] border border-[#333] p-4 rounded-xl flex justify-between items-center">
                         <div>
                           <p className="font-bold">{ex.name}</p>
-                          <p className="text-xs text-slate-500">Rating: {ex.rating}/5</p>
+                          <p className="text-xs text-slate-500">
+                            Ausführung: {ex.isUnilateral ? 'Pro Seite' : 'Beidseitig'} | Rating: {ex.rating}/5
+                          </p>
                         </div>
                       </div>
                     ))}
@@ -106,7 +103,6 @@ export default function App() {
           </section>
         )}
 
-        {/* VERLAUF */}
         {currentTab === 'history' && (
           <section>
             <header className="mb-8"><h1 className="text-2xl font-bold">Verlauf</h1></header>
@@ -116,7 +112,6 @@ export default function App() {
           </section>
         )}
 
-        {/* EINSTELLUNGEN */}
         {currentTab === 'settings' && (
           <section>
             <header className="mb-8"><h1 className="text-2xl font-bold">Einstellungen</h1></header>
