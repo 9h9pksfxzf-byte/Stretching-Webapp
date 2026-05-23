@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useStore, PerformedExercise } from '../store/useStore';
 import { useTimer } from '../hooks/useTimer';
 
@@ -26,31 +26,39 @@ export const RoutineRunner = ({ programId, onClose }: RoutineRunnerProps) => {
     ? (currentProgramData?.breakDuration || 0) 
     : (currentProgramData?.duration || 0);
 
-  // Nutzen der originalen Hook mit exakt 2 Argumenten
-  const { timeLeft, isActive, toggle, skip } = useTimer(
-    currentDuration,
-    () => {
-      // Dieser Callback feuert, wenn timeLeft auf 0 sinkt.
-      // Um das Closure-Problem von veraltetem 'isBreak' im Handy-Browser zu umgehen,
-      // nutzen wir eine atomare Weiche.
-      if (isBreak) {
-        setIsBreak(false);
-        setIndex((i) => i + 1);
-      } else {
-        setShowRatingScreen(true);
-      }
-    }
-  );
+  // Wir übergeben eine leere Dummy-Funktion () => {} als zweiten Parameter,
+  // damit TypeScript auf Vercel nicht wegen fehlender Argumente meckert.
+  const { timeLeft, isActive, toggle, skip } = useTimer(currentDuration, () => {});
 
-  // Manuelle Skip-Aktion spiegelt exakt das Verhalten des Timers
-  const handleManualSkip = () => {
+  // ZENTRALE STEUERUNG: Sobald timeLeft auf 0 sinkt (egal ob durch Ablauf oder Skip),
+  // fangen wir das hier im React-Lebenszyklus sauber ab.
+  useEffect(() => {
+    if (timeLeft === 0 && isActive) {
+      // Eine winzige Verzögerung verhindert Race-Conditions beim State-Update
+      const timer = setTimeout(() => {
+        handlePhaseEnd();
+      }, 50);
+      return () => clearTimeout(timer);
+    }
+  }, [timeLeft, isActive]);
+
+  const handlePhaseEnd = () => {
     if (isBreak) {
+      // Pause vorbei -> Weiter zur nächsten Übung
       setIsBreak(false);
       setIndex((i) => i + 1);
     } else {
+      // Aktive Übung vorbei -> Rating erzwingen
       setShowRatingScreen(true);
     }
-    skip(); // Ruft das originale Skip deiner Hook auf, um intern den Timer zurückzusetzen
+  };
+
+  // Skip-Button triggert nun die offizielle Hook-Skip-Funktion.
+  // Falls deine Hook bei Skip den timeLeft-State nicht auf 0 setzt,
+  // rufen wir handlePhaseEnd() hier zur Sicherheit zusätzlich direkt auf.
+  const handleManualSkip = () => {
+    handlePhaseEnd();
+    skip(); 
   };
 
   // Verarbeitet die Vergabe des 1-10 Ratings nach einer aktiven Übung
@@ -89,6 +97,7 @@ export const RoutineRunner = ({ programId, onClose }: RoutineRunnerProps) => {
       }
       setIndex((i) => i + 1);
     } else {
+      // Wenn noch Übungen anstehen -> Wechsel in die Pause
       setIsBreak(true);
     }
   };
