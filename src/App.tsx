@@ -13,6 +13,7 @@ export default function App() {
   const [currentTab, setCurrentTab] = useState<TabState>('home');
   const [overlay, setOverlay] = useState<OverlayState>('none');
   const [activeProgramId, setActiveProgramId] = useState<string>('');
+  const [editingExerciseId, setEditingExerciseId] = useState<string | null>(null);
   
   const library = useStore(state => state.library);
 
@@ -23,6 +24,7 @@ export default function App() {
     return acc;
   }, {} as Record<string, Exercise[]>);
 
+  // --- OVERLAYS ---
   if (overlay === 'active') {
     return (
       <div className="bg-[#0a0a0a] min-h-screen text-white relative">
@@ -30,9 +32,13 @@ export default function App() {
           onClick={() => setOverlay('none')} 
           className="absolute top-4 left-4 p-2 text-slate-500 z-10"
         >
-          ← Back
+          ← Zurück
         </button>
-        <RoutineRunner programId={activeProgramId} />
+        {/* Hier wird die onClose-Prop an RoutineRunner übergeben */}
+        <RoutineRunner 
+          programId={activeProgramId} 
+          onClose={() => setOverlay('none')} 
+        />
       </div>
     );
   }
@@ -42,13 +48,24 @@ export default function App() {
   }
 
   if (overlay === 'build-exercise') {
-    return <div className="bg-[#0a0a0a] min-h-screen"><ExerciseBuilder onClose={() => setOverlay('none')} /></div>;
+    return (
+      <div className="bg-[#0a0a0a] min-h-screen">
+        <ExerciseBuilder 
+          exerciseId={editingExerciseId} 
+          onClose={() => {
+            setOverlay('none');
+            setEditingExerciseId(null);
+          }} 
+        />
+      </div>
+    );
   }
 
   return (
     <div className="bg-[#0a0a0a] min-h-screen text-white pb-24">
       <main className="p-6">
         
+        {/* START-BILDSCHIRM */}
         {currentTab === 'home' && (
           <section>
             <header className="flex justify-between items-center mb-8">
@@ -67,12 +84,16 @@ export default function App() {
           </section>
         )}
 
+        {/* BIBLIOTHEK */}
         {currentTab === 'library' && (
           <section>
             <header className="flex justify-between items-center mb-8">
               <h1 className="text-2xl font-bold">Bibliothek</h1>
               <button 
-                onClick={() => setOverlay('build-exercise')} 
+                onClick={() => {
+                  setEditingExerciseId(null);
+                  setOverlay('build-exercise');
+                }} 
                 className="text-xs font-bold bg-[#1a1a1a] border border-[#333] px-3 py-2 rounded-lg text-slate-300"
               >
                 + Übung
@@ -94,6 +115,15 @@ export default function App() {
                             Ausführung: {ex.isUnilateral ? 'Pro Seite' : 'Beidseitig'} | Rating: {ex.rating}/5
                           </p>
                         </div>
+                        <button
+                          onClick={() => {
+                            setEditingExerciseId(ex.id);
+                            setOverlay('build-exercise');
+                          }}
+                          className="text-xs bg-[#2a2a2a] border border-[#444] px-3 py-1.5 rounded-lg text-slate-300 hover:border-emerald-500 transition-colors"
+                        >
+                          Bearbeiten
+                        </button>
                       </div>
                     ))}
                   </div>
@@ -103,6 +133,7 @@ export default function App() {
           </section>
         )}
 
+        {/* VERLAUF */}
         {currentTab === 'history' && (
           <section>
             <header className="mb-8"><h1 className="text-2xl font-bold">Verlauf</h1></header>
@@ -112,6 +143,7 @@ export default function App() {
           </section>
         )}
 
+        {/* EINSTELLUNGEN */}
         {currentTab === 'settings' && (
           <section>
             <header className="mb-8"><h1 className="text-2xl font-bold">Einstellungen</h1></header>
