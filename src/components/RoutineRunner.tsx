@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useStore, PerformedExercise } from '../store/useStore';
 import { useTimer } from '../hooks/useTimer';
 
@@ -12,6 +12,7 @@ export const RoutineRunner = ({ programId, onClose }: RoutineRunnerProps) => {
   const [index, setIndex] = useState<number>(0);
   const [isBreak, setIsBreak] = useState<boolean>(false);
   
+  // Zustände für das Rating-Schnittstelle und den Session-Speicher
   const [showRatingScreen, setShowRatingScreen] = useState<boolean>(false);
   const [completedExercises, setCompletedExercises] = useState<PerformedExercise[]>([]);
 
@@ -24,35 +25,22 @@ export const RoutineRunner = ({ programId, onClose }: RoutineRunnerProps) => {
     ? (currentProgramData?.breakDuration || 0) 
     : (currentProgramData?.duration || 0);
 
-  // Dummy-Callback, da deine Hook 2 Argumente erzwingt
-  const { timeLeft, isActive, toggle, skip } = useTimer(currentDuration, () => {});
-
-  // VERBESSERTER MECHANISMUS: Wir lauschen NUR noch auf timeLeft === 0.
-  // Unabhängig davon, ob isActive true oder false ist.
-  useEffect(() => {
-    if (timeLeft === 0) {
-      handlePhaseEnd();
-    }
-  }, [timeLeft]);
-
-  const handlePhaseEnd = () => {
+  // Der zentrale Dreh- und Angelpunkt: Was passiert, wenn die Zeit abgelaufen ist (oder Skip gedrückt wird)
+  const handleTimerComplete = () => {
     if (isBreak) {
-      // Pause vorbei -> Weiter zur nächsten Übung
+      // Pause vorbei -> Direkt weiter zur nächsten Übung
       setIsBreak(false);
       setIndex((i) => i + 1);
     } else {
-      // Aktive Übung vorbei -> Rating anzeigen!
+      // Aktive Übung vorbei -> Phase einfrieren und Rating-Schnittstelle erzwingen!
       setShowRatingScreen(true);
     }
   };
 
-  // Ersetzt das fehlerhafte Skip. Wir zwingen die App in die nächste Phase
-  // und rufen das originale Skip auf, um den Hook-Timer zurückzusetzen.
-  const handleManualSkip = () => {
-    handlePhaseEnd();
-    skip(); 
-  };
+  // Wir binden den bereinigten Callback an die umgebaute Hook an
+  const { timeLeft, isActive, toggle, skip } = useTimer(currentDuration, handleTimerComplete);
 
+  // Verarbeitet die Bewertung der Übung
   const handleRatingSelection = (ratingValue: number) => {
     if (!currentProgramData || !currentExerciseData) return;
 
@@ -69,6 +57,7 @@ export const RoutineRunner = ({ programId, onClose }: RoutineRunnerProps) => {
     setCompletedExercises(updatedExercises);
     setShowRatingScreen(false);
 
+    // Prüfen, ob das gesamte Programm beendet ist
     if (index >= programExercises.length - 1) {
       if (program) {
         addHistoryEntry({
@@ -87,10 +76,12 @@ export const RoutineRunner = ({ programId, onClose }: RoutineRunnerProps) => {
       }
       setIndex((i) => i + 1);
     } else {
+      // Es folgen weitere Übungen -> Jetzt erst in die Pause wechseln
       setIsBreak(true);
     }
   };
 
+  // Abschluss-Schnittstelle nach dem vollständigen Programm-Durchlauf
   if (!currentProgramData || !currentExerciseData || !program) {
     return (
       <div className="flex flex-col items-center justify-center p-6 h-screen text-white gap-8 -mt-10">
@@ -118,7 +109,7 @@ export const RoutineRunner = ({ programId, onClose }: RoutineRunnerProps) => {
     return `${nextEx.name} ${nextProgramData.side ? `(${nextProgramData.side})` : ''}`;
   };
 
-  // INTERFACE 1: BEWERTUNGS-MODAL (1-10)
+  // INTERFACE 1: BEWERTUNGS-SCHNITTESTELLE (1-10)
   if (showRatingScreen) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen bg-[#0a0a0a] text-white p-6 gap-6 absolute inset-0 z-50">
@@ -184,7 +175,7 @@ export const RoutineRunner = ({ programId, onClose }: RoutineRunnerProps) => {
         <button onClick={toggle} className="bg-slate-800 py-6 rounded-2xl font-bold text-base">
           {isActive ? 'Pause' : 'Start'}
         </button>
-        <button onClick={handleManualSkip} className="bg-slate-800 py-6 rounded-2xl font-bold text-base">
+        <button onClick={skip} className="bg-slate-800 py-6 rounded-2xl font-bold text-base">
           Skip
         </button>
         <button onClick={() => window.location.reload()} className="bg-red-900/30 py-6 rounded-2xl font-bold text-base text-red-400">
