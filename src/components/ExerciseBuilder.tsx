@@ -23,6 +23,7 @@ export const ExerciseBuilder = ({ onClose }: ExerciseBuilderProps) => {
   const [name, setName] = useState<string>('');
   const [bodyRegion, setBodyRegion] = useState<string>(BODY_REGIONS[0]);
   const [rating, setRating] = useState<number>(3);
+  const [isUnilateral, setIsUnilateral] = useState<boolean>(false);
 
   const handleSave = () => {
     if (!name.trim() || !bodyRegion) return;
@@ -31,7 +32,8 @@ export const ExerciseBuilder = ({ onClose }: ExerciseBuilderProps) => {
       id: Date.now().toString(),
       name: name.trim(),
       bodyRegion: bodyRegion,
-      rating
+      rating,
+      isUnilateral
     });
     
     onClose();
@@ -69,6 +71,28 @@ export const ExerciseBuilder = ({ onClose }: ExerciseBuilderProps) => {
         </div>
 
         <div className="bg-[#1a1a1a] border border-[#333] rounded-xl p-4">
+          <span className="text-slate-300 block mb-3">Ausführung</span>
+          <div className="flex gap-2">
+            <button
+              onClick={() => setIsUnilateral(false)}
+              className={`flex-1 py-3 rounded-lg font-bold border transition-all ${
+                !isUnilateral ? 'bg-emerald-600 border-emerald-500' : 'bg-[#0a0a0a] border-[#333]'
+              }`}
+            >
+              Beidseitig
+            </button>
+            <button
+              onClick={() => setIsUnilateral(true)}
+              className={`flex-1 py-3 rounded-lg font-bold border transition-all ${
+                isUnilateral ? 'bg-emerald-600 border-emerald-500' : 'bg-[#0a0a0a] border-[#333]'
+              }`}
+            >
+              Pro Seite
+            </button>
+          </div>
+        </div>
+
+        <div className="bg-[#1a1a1a] border border-[#333] rounded-xl p-4">
           <span className="text-slate-300 block mb-3">Wie sehr magst du die Übung? (1-5)</span>
           <div className="flex justify-between gap-2">
             {[1, 2, 3, 4, 5].map(num => (
@@ -90,7 +114,7 @@ export const ExerciseBuilder = ({ onClose }: ExerciseBuilderProps) => {
           className="w-full bg-emerald-600 py-4 rounded-xl font-bold mt-4 disabled:opacity-50"
           disabled={!name.trim() || !bodyRegion}
         >
-          Übung in Bibliothek speichern
+          Übung speichern
         </button>
       </div>
     </div>
