@@ -12,13 +12,42 @@ type OverlayState = 'none' | 'active' | 'build-program' | 'build-exercise';
 export default function App() {
   const [currentTab, setCurrentTab] = useState<TabState>('home');
   const [overlay, setOverlay] = useState<OverlayState>('none');
-  
-  // IDs für die Bearbeitung von Programmen und Übungen
   const [activeProgramId, setActiveProgramId] = useState<string>('');
   const [editingId, setEditingId] = useState<string | null>(null);
   
-  const { library, deleteExercise } = useStore();
+  const { library, deleteExercise, programs } = useStore();
 
+  // --- DATEN-FUNKTIONEN ---
+  const exportData = () => {
+    const data = JSON.stringify({ library, programs });
+    const blob = new Blob([data], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `stretching-backup-${new Date().toISOString().slice(0, 10)}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const importData = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const content = JSON.parse(e.target?.result as string);
+        if (content.library && content.programs) {
+          useStore.setState({ library: content.library, programs: content.programs });
+          alert('Daten erfolgreich importiert!');
+        }
+      } catch (err) {
+        alert('Fehler beim Importieren der Datei.');
+      }
+    };
+    reader.readAsText(file);
+  };
+
+  // --- LIBRARY GRUPPIERUNG ---
   const groupedLibrary = library.reduce((acc, ex) => {
     const region = ex.bodyRegion || 'Sonstige';
     if (!acc[region]) acc[region] = [];
@@ -27,37 +56,24 @@ export default function App() {
   }, {} as Record<string, Exercise[]>);
 
   // --- OVERLAY-LOGIK ---
-  
-  if (overlay === 'active') {
-    return (
-      <div className="bg-[#0a0a0a] min-h-screen text-white relative">
-        <button onClick={() => setOverlay('none')} className="absolute top-4 left-4 p-2 text-slate-500 z-10">← Zurück</button>
-        <RoutineRunner programId={activeProgramId} onClose={() => setOverlay('none')} />
-      </div>
-    );
-  }
+  if (overlay === 'active') return (
+    <div className="bg-[#0a0a0a] min-h-screen text-white relative">
+      <button onClick={() => setOverlay('none')} className="absolute top-4 left-4 p-2 text-slate-500 z-10">← Zurück</button>
+      <RoutineRunner programId={activeProgramId} onClose={() => setOverlay('none')} />
+    </div>
+  );
 
-  if (overlay === 'build-program') {
-    return (
-      <div className="bg-[#0a0a0a] min-h-screen">
-        <ProgramBuilder 
-          programId={editingId} 
-          onClose={() => { setOverlay('none'); setEditingId(null); }} 
-        />
-      </div>
-    );
-  }
+  if (overlay === 'build-program') return (
+    <div className="bg-[#0a0a0a] min-h-screen">
+      <ProgramBuilder programId={editingId} onClose={() => { setOverlay('none'); setEditingId(null); }} />
+    </div>
+  );
 
-  if (overlay === 'build-exercise') {
-    return (
-      <div className="bg-[#0a0a0a] min-h-screen">
-        <ExerciseBuilder 
-          exerciseId={editingId} 
-          onClose={() => { setOverlay('none'); setEditingId(null); }} 
-        />
-      </div>
-    );
-  }
+  if (overlay === 'build-exercise') return (
+    <div className="bg-[#0a0a0a] min-h-screen">
+      <ExerciseBuilder exerciseId={editingId} onClose={() => { setOverlay('none'); setEditingId(null); }} />
+    </div>
+  );
 
   return (
     <div className="bg-[#0a0a0a] min-h-screen text-white pb-24">
@@ -68,12 +84,7 @@ export default function App() {
           <section>
             <header className="flex justify-between items-center mb-8">
               <h1 className="text-2xl font-bold">Start</h1>
-              <button 
-                onClick={() => { setEditingId(null); setOverlay('build-program'); }} 
-                className="text-xs font-bold bg-emerald-900/30 text-emerald-500 border border-emerald-500/30 px-3 py-2 rounded-lg"
-              >
-                + Programm
-              </button>
+              <button onClick={() => { setEditingId(null); setOverlay('build-program'); }} className="text-xs font-bold bg-emerald-900/30 text-emerald-500 border border-emerald-500/30 px-3 py-2 rounded-lg">+ Programm</button>
             </header>
             <ProgramGrid onSelect={(id) => { setActiveProgramId(id); setOverlay('active'); }} onEdit={(id) => { setEditingId(id); setOverlay('build-program'); }} />
           </section>
@@ -84,14 +95,8 @@ export default function App() {
           <section>
             <header className="flex justify-between items-center mb-8">
               <h1 className="text-2xl font-bold">Bibliothek</h1>
-              <button 
-                onClick={() => { setEditingId(null); setOverlay('build-exercise'); }} 
-                className="text-xs font-bold bg-[#1a1a1a] border border-[#333] px-3 py-2 rounded-lg text-slate-300"
-              >
-                + Übung
-              </button>
+              <button onClick={() => { setEditingId(null); setOverlay('build-exercise'); }} className="text-xs font-bold bg-[#1a1a1a] border border-[#333] px-3 py-2 rounded-lg text-slate-300">+ Übung</button>
             </header>
-            
             <div className="flex flex-col gap-6">
               {Object.entries(groupedLibrary).map(([region, exercises]) => (
                 <div key={region}>
@@ -116,8 +121,20 @@ export default function App() {
           </section>
         )}
 
-        {currentTab === 'history' && <section><header><h1 className="text-2xl font-bold">Verlauf</h1></header></section>}
-        {currentTab === 'settings' && <section><header><h1 className="text-2xl font-bold">Einstellungen</h1></header></section>}
+        {/* EINSTELLUNGEN */}
+        {currentTab === 'settings' && (
+          <section>
+            <header className="mb-8"><h1 className="text-2xl font-bold">Einstellungen</h1></header>
+            <div className="bg-[#1a1a1a] border border-[#333] p-6 rounded-xl flex flex-col gap-4">
+              <h3 className="font-bold">Datensicherung</h3>
+              <button onClick={exportData} className="w-full bg-[#2a2a2a] p-3 rounded-lg border border-[#444] text-sm">Daten exportieren (JSON)</button>
+              <label className="w-full bg-emerald-900/30 text-emerald-500 p-3 rounded-lg border border-emerald-500/30 text-center text-sm cursor-pointer">
+                Daten importieren
+                <input type="file" accept=".json" className="hidden" onChange={importData} />
+              </label>
+            </div>
+          </section>
+        )}
 
       </main>
       <BottomNav activeTab={currentTab} onChange={setCurrentTab} />
