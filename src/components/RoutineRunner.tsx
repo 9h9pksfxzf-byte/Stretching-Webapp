@@ -8,13 +8,16 @@ export const RoutineRunner = ({ programId }: { programId: string }) => {
   const [isBreak, setIsBreak] = useState<boolean>(false);
 
   const program = programs.find(p => p.id === programId);
-  const programIds = program ? program.exerciseIds : [];
-  const current = library.find(e => e.id === programIds[index]);
+  const programExercises = program ? program.exercises : [];
+  const currentProgramData = programExercises[index];
+  const currentExerciseData = library.find(e => e.id === currentProgramData?.exerciseId);
 
-  if (!current || !program) return <div className="p-10 text-center text-2xl text-white">Session Complete!</div>;
+  if (!currentProgramData || !currentExerciseData || !program) {
+    return <div className="p-10 text-center text-2xl text-white">Session Complete!</div>;
+  }
 
   const { timeLeft, isActive, toggle, skip } = useTimer(
-    isBreak ? current.breakDuration : current.duration, 
+    isBreak ? currentProgramData.breakDuration : currentProgramData.duration, 
     () => { 
       if (isBreak) {
         setIsBreak(false);
@@ -29,11 +32,14 @@ export const RoutineRunner = ({ programId }: { programId: string }) => {
     <div className="flex flex-col items-center p-6 gap-6 text-white">
       <div className="text-center">
         <p className="text-slate-400 uppercase tracking-widest text-xs mb-2">
-          {isBreak ? "Break" : `Exercise ${index + 1} of ${programIds.length}`}
+          {isBreak ? "Break" : `Exercise ${index + 1} of ${programExercises.length}`}
         </p>
         <h1 className="text-3xl font-bold">
-          {isBreak ? "Next: " + (library.find(e => e.id === programIds[index+1])?.name || "Done") : current.name}
+          {isBreak 
+            ? "Next: " + (library.find(e => e.id === programExercises[index+1]?.exerciseId)?.name || "Done") 
+            : currentExerciseData.name}
         </h1>
+        {!isBreak && <p className="text-emerald-500 text-sm mt-1">{currentExerciseData.bodyRegion} | Rating: {currentExerciseData.rating}/5</p>}
       </div>
 
       <div className="text-[120px] font-mono font-bold leading-none">{timeLeft}</div>
