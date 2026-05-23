@@ -17,13 +17,13 @@ export const ProgramBuilder = ({ onClose }: ProgramBuilderProps) => {
     if (exercise.isUnilateral) {
       setProgramExercises(prev => [
         ...prev, 
-        { exerciseId, duration: 60, breakDuration: 10, side: 'Links' },
-        { exerciseId, duration: 60, breakDuration: 10, side: 'Rechts' }
+        { exerciseId, duration: 30, breakDuration: 10, side: 'Links' },
+        { exerciseId, duration: 30, breakDuration: 10, side: 'Rechts' }
       ]);
     } else {
       setProgramExercises(prev => [
         ...prev, 
-        { exerciseId, duration: 60, breakDuration: 10 }
+        { exerciseId, duration: 30, breakDuration: 10 }
       ]);
     }
   };
