@@ -6,14 +6,14 @@ export interface Exercise {
   name: string;
   bodyRegion: string;
   rating: number;
-  isUnilateral: boolean; // true = Pro Seite (wird verdoppelt), false = Beidseitig
+  isUnilateral: boolean;
 }
 
 export interface ProgramExercise {
   exerciseId: string;
   duration: number;
   breakDuration: number;
-  side?: 'Links' | 'Rechts'; // Wird nur gesetzt, wenn die Übung unilateral ist
+  side?: 'Links' | 'Rechts';
 }
 
 export interface Program {
@@ -28,6 +28,7 @@ interface AppState {
   library: Exercise[];
   programs: Program[];
   addExercise: (ex: Exercise) => void;
+  updateExercise: (id: string, updatedEx: Exercise) => void;
   addProgram: (prog: Program) => void;
 }
 
@@ -44,16 +45,19 @@ export const useStore = create<AppState>()(
         { 
           id: 'p1', name: 'Kurz', timeLabel: '15 min', icon: '⏱', 
           exercises: [
-            { exerciseId: '1', duration: 60, breakDuration: 10, side: 'Links' },
-            { exerciseId: '1', duration: 60, breakDuration: 10, side: 'Rechts' },
-            { exerciseId: '3', duration: 60, breakDuration: 10, side: 'Links' },
-            { exerciseId: '3', duration: 60, breakDuration: 10, side: 'Rechts' }
+            { exerciseId: '1', duration: 30, breakDuration: 10, side: 'Links' },
+            { exerciseId: '1', duration: 30, breakDuration: 10, side: 'Rechts' },
+            { exerciseId: '3', duration: 30, breakDuration: 10, side: 'Links' },
+            { exerciseId: '3', duration: 30, breakDuration: 10, side: 'Rechts' }
           ] 
         }
       ],
       addExercise: (ex) => set((state) => ({ library: [...state.library, ex] })),
+      updateExercise: (id, updatedEx) => set((state) => ({
+        library: state.library.map((ex) => (ex.id === id ? updatedEx : ex))
+      })),
       addProgram: (prog) => set((state) => ({ programs: [...state.programs, prog] })),
     }),
-    { name: 'stretch-storage-v4' }
+    { name: 'stretch-storage-v6' }
   )
 );
