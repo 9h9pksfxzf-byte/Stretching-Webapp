@@ -1,58 +1,39 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 
-export const useTimer = (duration: number, onComplete: () => void) => {
-  const [timeLeft, setTimeLeft] = useState(duration);
+export const useTimer = (initialTime: number, onComplete: () => void) => {
+  const [timeLeft, setTimeLeft] = useState(initialTime);
   const [isActive, setIsActive] = useState(false);
-  const endTimeRef = useRef<number | null>(null);
 
-  const playBeep = () => {
-    const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
-    const osc = audioCtx.createOscillator();
-    osc.connect(audioCtx.destination);
-    osc.frequency.value = 440;
-    osc.start();
-    osc.stop(audioCtx.currentTime + 0.1);
-  };
+  // Setzt den Timer zurück, wenn sich die Dauer (Übung/Pause) ändert
+  useEffect(() => {
+    setTimeLeft(initialTime);
+    setIsActive(false);
+  }, [initialTime]);
 
   useEffect(() => {
-    if (!isActive) return;
+    let interval: NodeJS.Timeout | null = null;
 
-    if (!endTimeRef.current) {
-      endTimeRef.current = Date.now() + timeLeft * 1000;
+    if (isActive && timeLeft > 0) {
+      interval = setInterval(() => {
+        setTimeLeft((time) => time - 1);
+      }, 1000);
+    } else if (timeLeft === 0 && isActive) {
+      setIsActive(false);
+      onComplete(); // Signalisiert dem RoutineRunner, dass die Zeit um ist
     }
 
-    const interval = setInterval(() => {
-      const remaining = Math.max(0, Math.round((endTimeRef.current! - Date.now()) / 1000));
-      
-      if (remaining > 0 && remaining <= 3 && remaining !== timeLeft) {
-        playBeep();
-      }
-
-      setTimeLeft(remaining);
-
-      if (remaining === 0) {
-        setIsActive(false);
-        endTimeRef.current = null;
-        onComplete();
-      }
-    }, 200);
-
-    return () => clearInterval(interval);
+    return () => {
+      if (interval) clearInterval(interval);
+    };
   }, [isActive, timeLeft, onComplete]);
 
-  const toggle = () => {
-    if (isActive) {
-      endTimeRef.current = null;
-    } else {
-      endTimeRef.current = Date.now() + timeLeft * 1000;
-    }
-    setIsActive(!isActive);
-  };
-
-  const skip = () => {
+  const toggle = useCallback(() => setIsActive((v) => !v), []);
+  
+  const skip = useCallback(() => {
     setIsActive(false);
-    onComplete();
-  };
+    setTimeLeft(0);
+    onComplete(); // Löst den Phasenwechsel im RoutineRunner auch beim Überspringen aus
+  }, [onComplete]);
 
   return { timeLeft, isActive, toggle, skip };
 };
