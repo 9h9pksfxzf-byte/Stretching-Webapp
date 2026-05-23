@@ -17,7 +17,6 @@ export default function App() {
   
   const { library, deleteExercise, programs } = useStore();
 
-  // --- DATEN-FUNKTIONEN ---
   const exportData = () => {
     const data = JSON.stringify({ library, programs });
     const blob = new Blob([data], { type: 'application/json' });
@@ -47,7 +46,6 @@ export default function App() {
     reader.readAsText(file);
   };
 
-  // --- LIBRARY GRUPPIERUNG ---
   const groupedLibrary = library.reduce((acc, ex) => {
     const region = ex.bodyRegion || 'Sonstige';
     if (!acc[region]) acc[region] = [];
@@ -55,7 +53,6 @@ export default function App() {
     return acc;
   }, {} as Record<string, Exercise[]>);
 
-  // --- OVERLAY-LOGIK ---
   if (overlay === 'active') return (
     <div className="bg-[#0a0a0a] min-h-screen text-white relative">
       <button onClick={() => setOverlay('none')} className="absolute top-4 left-4 p-2 text-slate-500 z-10">← Zurück</button>
@@ -103,14 +100,17 @@ export default function App() {
                   <h2 className="text-sm font-bold text-slate-400 uppercase mb-3 border-b border-[#333] pb-2">{region}</h2>
                   <div className="flex flex-col gap-3">
                     {exercises.map(ex => (
-                      <div key={ex.id} className="bg-[#1a1a1a] border border-[#333] p-4 rounded-xl flex justify-between items-center">
-                        <div>
-                          <p className="font-bold">{ex.name}</p>
-                          <p className="text-xs text-slate-500">{ex.isUnilateral ? 'Pro Seite' : 'Beidseitig'}</p>
+                      <div key={ex.id} className="bg-[#1a1a1a] border border-[#333] p-4 rounded-xl flex justify-between items-start gap-4">
+                        <div className="flex-1 min-w-0">
+                          <p className="font-bold text-white truncate">{ex.name}</p>
+                          <p className="text-[11px] text-emerald-500 font-medium mt-0.5">{ex.isUnilateral ? 'Pro Seite' : 'Beidseitig'} | ★ {ex.rating}/5</p>
+                          {ex.description && (
+                            <p className="text-xs text-slate-400 mt-2 line-clamp-2 leading-relaxed">{ex.description}</p>
+                          )}
                         </div>
-                        <div className="flex gap-2">
-                          <button onClick={() => { setEditingId(ex.id); setOverlay('build-exercise'); }} className="text-xs bg-[#2a2a2a] px-3 py-1 rounded">Bearbeiten</button>
-                          <button onClick={() => deleteExercise(ex.id)} className="text-xs text-red-500">Löschen</button>
+                        <div className="flex flex-col gap-2 shrink-0">
+                          <button onClick={() => { setEditingId(ex.id); setOverlay('build-exercise'); }} className="text-xs bg-[#2a2a2a] px-3 py-1.5 rounded-lg border border-[#444]">Edit</button>
+                          <button onClick={() => deleteExercise(ex.id)} className="text-xs text-red-400 bg-red-950/20 px-3 py-1.5 rounded-lg border border-red-900/30">Del</button>
                         </div>
                       </div>
                     ))}
