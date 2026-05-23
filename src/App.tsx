@@ -4,68 +4,114 @@ import { ProgramGrid } from './components/ProgramGrid';
 import { BottomNav } from './components/BottomNav';
 import { ProgramBuilder } from './components/ProgramBuilder';
 import { ExerciseBuilder } from './components/ExerciseBuilder';
+import { useStore } from './store/useStore';
 
-type ViewState = 'menu' | 'active' | 'build-program' | 'build-exercise';
+type TabState = 'home' | 'library' | 'history' | 'settings';
+type OverlayState = 'none' | 'active' | 'build-program' | 'build-exercise';
 
 export default function App() {
-  const [view, setView] = useState<ViewState>('menu');
+  const [currentTab, setCurrentTab] = useState<TabState>('home');
+  const [overlay, setOverlay] = useState<OverlayState>('none');
   const [activeProgramId, setActiveProgramId] = useState<string>('');
+  
+  // Lade die Bibliothek für den neuen Bibliothek-Screen
+  const library = useStore(state => state.library);
 
+  // --- OVERLAYS (verdecken die gesamte App inkl. Navigation) ---
+  if (overlay === 'active') {
+    return (
+      <div className="bg-[#0a0a0a] min-h-screen text-white relative">
+        <button 
+          onClick={() => setOverlay('none')} 
+          className="absolute top-4 left-4 p-2 text-slate-500 z-10"
+        >
+          ← Back
+        </button>
+        <RoutineRunner programId={activeProgramId} />
+      </div>
+    );
+  }
+
+  if (overlay === 'build-program') {
+    return <div className="bg-[#0a0a0a] min-h-screen"><ProgramBuilder onClose={() => setOverlay('none')} /></div>;
+  }
+
+  if (overlay === 'build-exercise') {
+    return <div className="bg-[#0a0a0a] min-h-screen"><ExerciseBuilder onClose={() => setOverlay('none')} /></div>;
+  }
+
+  // --- HAUPT-TABS ---
   return (
     <div className="bg-[#0a0a0a] min-h-screen text-white pb-24">
-      {view === 'active' && (
-        <div className="relative">
-          <button 
-            onClick={() => setView('menu')} 
-            className="absolute top-4 left-4 p-2 text-slate-500 z-10"
-          >
-            ← Back
-          </button>
-          <RoutineRunner programId={activeProgramId} />
-        </div>
-      )}
-
-      {view === 'build-program' && (
-        <ProgramBuilder onClose={() => setView('menu')} />
-      )}
-
-      {view === 'build-exercise' && (
-        <ExerciseBuilder onClose={() => setView('menu')} />
-      )}
-
-      {view === 'menu' && (
-        <main className="p-6">
-          <header className="flex justify-between items-center mb-8">
-            <h1 className="text-2xl font-bold">Library</h1>
-            <div className="flex gap-2">
+      <main className="p-6">
+        
+        {/* START-BILDSCHIRM */}
+        {currentTab === 'home' && (
+          <section>
+            <header className="flex justify-between items-center mb-8">
+              <h1 className="text-2xl font-bold">Start</h1>
               <button 
-                onClick={() => setView('build-exercise')} 
-                className="text-xs font-bold bg-[#1a1a1a] border border-[#333] px-3 py-2 rounded-lg text-slate-300 hover:border-emerald-500"
-              >
-                + Übung
-              </button>
-              <button 
-                onClick={() => setView('build-program')} 
-                className="text-xs font-bold bg-emerald-900/30 text-emerald-500 border border-emerald-500/30 px-3 py-2 rounded-lg hover:bg-emerald-900/50"
+                onClick={() => setOverlay('build-program')} 
+                className="text-xs font-bold bg-emerald-900/30 text-emerald-500 border border-emerald-500/30 px-3 py-2 rounded-lg"
               >
                 + Programm
               </button>
+            </header>
+            <ProgramGrid onSelect={(id) => { 
+              setActiveProgramId(id); 
+              setOverlay('active'); 
+            }} />
+          </section>
+        )}
+
+        {/* BIBLIOTHEK */}
+        {currentTab === 'library' && (
+          <section>
+            <header className="flex justify-between items-center mb-8">
+              <h1 className="text-2xl font-bold">Bibliothek</h1>
+              <button 
+                onClick={() => setOverlay('build-exercise')} 
+                className="text-xs font-bold bg-[#1a1a1a] border border-[#333] px-3 py-2 rounded-lg text-slate-300"
+              >
+                + Übung
+              </button>
+            </header>
+            <div className="flex flex-col gap-3">
+              {library.map(ex => (
+                <div key={ex.id} className="bg-[#1a1a1a] border border-[#333] p-4 rounded-xl flex justify-between items-center">
+                  <div>
+                    <p className="font-bold">{ex.name}</p>
+                    <p className="text-xs text-slate-500">Region: {ex.bodyRegion} | Rating: {ex.rating}/5</p>
+                  </div>
+                </div>
+              ))}
             </div>
-          </header>
-          
-          <ProgramGrid onSelect={(id) => { 
-            setActiveProgramId(id); 
-            setView('active'); 
-          }} />
+          </section>
+        )}
 
-          <div className="bg-[#1a1a1a] p-6 rounded-2xl border border-[#333]">
-            <h2 className="text-sm text-slate-400 mb-2">Ready to start?</h2>
-            <p className="text-lg">Select a program to begin your session.</p>
-          </div>
-        </main>
-      )}
+        {/* VERLAUF */}
+        {currentTab === 'history' && (
+          <section>
+            <header className="mb-8"><h1 className="text-2xl font-bold">Verlauf</h1></header>
+            <div className="text-center text-slate-500 mt-20 border border-dashed border-[#333] p-8 rounded-2xl">
+              Noch keine Sessions protokolliert.
+            </div>
+          </section>
+        )}
 
-      {view === 'menu' && <BottomNav />}
+        {/* EINSTELLUNGEN */}
+        {currentTab === 'settings' && (
+          <section>
+            <header className="mb-8"><h1 className="text-2xl font-bold">Einstellungen</h1></header>
+            <div className="bg-[#1a1a1a] border border-[#333] p-4 rounded-xl">
+              <p className="text-sm text-slate-400">App-Einstellungen (bald verfügbar)</p>
+            </div>
+          </section>
+        )}
+
+      </main>
+
+      <BottomNav activeTab={currentTab} onChange={setCurrentTab} />
     </div>
   );
 }
