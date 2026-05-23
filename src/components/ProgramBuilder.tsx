@@ -10,18 +10,26 @@ export const ProgramBuilder = ({ onClose, programId }: ProgramBuilderProps) => {
   const { library, addProgram, updateProgram, programs } = useStore();
   const existing = programs.find((p) => p.id === programId);
 
-  // State-Initialisierung
   const [name, setName] = useState(existing?.name || '');
   const [exercises, setExercises] = useState<ProgramExercise[]>(existing?.exercises || []);
 
-  // Explizite Logik-Funktionen (Wartbarkeit!)
   const addExercise = (exerciseId: string) => {
     const ex = library.find((e) => e.id === exerciseId);
     if (!ex) return;
-    setExercises((prev) => [
-      ...prev,
-      { exerciseId, duration: 30, breakDuration: 10, side: ex.isUnilateral ? 'Links' : undefined },
-    ]);
+
+    if (ex.isUnilateral) {
+      // 1. Ansatz: Zwei separate Einträge hinzufügen
+      setExercises((prev) => [
+        ...prev,
+        { exerciseId, duration: 30, breakDuration: 10, side: 'Links' },
+        { exerciseId, duration: 30, breakDuration: 10, side: 'Rechts' }
+      ]);
+    } else {
+      setExercises((prev) => [
+        ...prev,
+        { exerciseId, duration: 30, breakDuration: 10 }
+      ]);
+    }
   };
 
   const removeExercise = (index: number) => {
@@ -65,19 +73,22 @@ export const ProgramBuilder = ({ onClose, programId }: ProgramBuilderProps) => {
         {exercises.map((pEx, i) => (
           <div key={i} className="bg-[#1a1a1a] border border-[#333] rounded-xl p-4">
             <div className="flex justify-between mb-3">
-              <span className="font-bold">{library.find(e => e.id === pEx.exerciseId)?.name}</span>
+              <span className="font-bold">
+                {library.find(e => e.id === pEx.exerciseId)?.name} 
+                {pEx.side && <span className="text-emerald-500 ml-2">({pEx.side})</span>}
+              </span>
               <button onClick={() => removeExercise(i)} className="text-red-500 text-sm">Löschen</button>
             </div>
             <div className="flex gap-4">
-              <input type="number" value={pEx.duration} onChange={(e) => updateTime(i, 'duration', Number(e.target.value))} className="w-1/2 bg-[#0a0a0a] p-2 rounded border border-[#333] text-center" />
-              <input type="number" value={pEx.breakDuration} onChange={(e) => updateTime(i, 'breakDuration', Number(e.target.value))} className="w-1/2 bg-[#0a0a0a] p-2 rounded border border-[#333] text-center" />
+              <input type="number" value={pEx.duration} onChange={(e) => updateTime(i, 'duration', Number(e.target.value))} className="w-1/2 bg-[#0a0a0a] p-2 rounded border border-[#333] text-center" placeholder="Dauer" />
+              <input type="number" value={pEx.breakDuration} onChange={(e) => updateTime(i, 'breakDuration', Number(e.target.value))} className="w-1/2 bg-[#0a0a0a] p-2 rounded border border-[#333] text-center" placeholder="Pause" />
             </div>
           </div>
         ))}
       </div>
 
       <div className="border-t border-[#333] pt-6">
-        <h3 className="text-slate-400 mb-4">Bibliothek:</h3>
+        <h3 className="text-slate-400 mb-4">Bibliothek (Unilaterale Übungen werden 2x hinzugefügt):</h3>
         <div className="flex flex-wrap gap-2">
           {library.map((ex) => (
             <button key={ex.id} onClick={() => addExercise(ex.id)} className="bg-[#1a1a1a] border border-[#333] px-4 py-2 rounded-full text-sm">
