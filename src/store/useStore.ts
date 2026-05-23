@@ -5,8 +5,9 @@ export interface Exercise {
   id: string;
   name: string;
   bodyRegion: string;
-  rating: number; // Globales Basis-Rating (1-5) aus der Bibliothek
+  rating: number; 
   isUnilateral: boolean;
+  description?: string; // Neu: Beschreibung der Übung
 }
 
 export interface ProgramExercise {
@@ -24,16 +25,15 @@ export interface Program {
   exercises: ProgramExercise[];
 }
 
-// Datenstruktur für eine bewertete Übung im Verlauf
 export interface PerformedExercise {
   exerciseId: string;
   name: string;
   side?: 'Links' | 'Rechts';
   duration: number;
-  executionRating: number; // Das neue 1-10 Rating nach der Ausführung
+  executionRating: number;
+  description?: string; // Neu: Wird in den Verlauf übernommen
 }
 
-// Datenstruktur für eine abgeschlossene Session im Verlauf
 export interface HistoryEntry {
   id: string;
   programId: string;
@@ -45,22 +45,31 @@ export interface HistoryEntry {
 interface AppState {
   library: Exercise[];
   programs: Program[];
-  history: HistoryEntry[]; // Neu: Verlaufsspeicher
+  history: HistoryEntry[];
   addExercise: (ex: Exercise) => void;
   updateExercise: (id: string, updatedEx: Exercise) => void;
   deleteExercise: (id: string) => void;
   addProgram: (prog: Program) => void;
   updateProgram: (id: string, updatedProg: Program) => void;
   deleteProgram: (id: string) => void;
-  addHistoryEntry: (entry: HistoryEntry) => void; // Neu: Funktion zum Speichern des Verlaufs
+  addHistoryEntry: (entry: HistoryEntry) => void;
 }
 
 export const useStore = create<AppState>()(
   persist(
     (set) => ({
-      library: [{ id: '1', name: 'Hüftbeuger', bodyRegion: 'Hüfte', rating: 3, isUnilateral: true }],
+      library: [
+        { 
+          id: '1', 
+          name: 'Hüftbeuger', 
+          bodyRegion: 'Hüfte', 
+          rating: 3, 
+          isUnilateral: true,
+          description: 'Einen großen Ausfallschritt nach vorne machen. Das hintere Knie ablegen und das Becken nach vorne-unten schieben, bis eine Dehnung in der Leiste spürbar ist.'
+        }
+      ],
       programs: [],
-      history: [], // Initial leerer Verlauf
+      history: [],
 
       addExercise: (ex) => set((state) => ({ library: [...state.library, ex] })),
       
@@ -87,9 +96,9 @@ export const useStore = create<AppState>()(
       })),
 
       addHistoryEntry: (entry) => set((state) => ({
-        history: [entry, ...state.history] // Neueste Sessions landen oben
+        history: [entry, ...state.history]
       })),
     }),
-    { name: 'stretch-storage-v10' } // Versions-Upgrade, um Storage-Konflikte am Handy zu vermeiden
+    { name: 'stretch-storage-v11' } // Version erhöht wegen Schema-Änderung
   )
 );
