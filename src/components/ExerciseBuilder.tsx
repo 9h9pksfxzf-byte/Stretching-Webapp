@@ -8,17 +8,17 @@ interface ExerciseBuilderProps {
 export const ExerciseBuilder = ({ onClose }: ExerciseBuilderProps) => {
   const addExercise = useStore(state => state.addExercise);
   const [name, setName] = useState<string>('');
-  const [duration, setDuration] = useState<number>(60);
-  const [breakDuration, setBreakDuration] = useState<number>(10);
+  const [bodyRegion, setBodyRegion] = useState<string>('');
+  const [rating, setRating] = useState<number>(3);
 
   const handleSave = () => {
-    if (!name.trim()) return;
+    if (!name.trim() || !bodyRegion.trim()) return;
     
     addExercise({
       id: Date.now().toString(),
       name: name.trim(),
-      duration,
-      breakDuration
+      bodyRegion: bodyRegion.trim(),
+      rating
     });
     
     onClose();
@@ -40,34 +40,37 @@ export const ExerciseBuilder = ({ onClose }: ExerciseBuilderProps) => {
           className="w-full bg-[#1a1a1a] border border-[#333] rounded-xl p-4 text-white outline-none focus:border-emerald-500 transition-colors"
         />
 
-        <div className="bg-[#1a1a1a] border border-[#333] rounded-xl p-4 flex justify-between items-center">
-          <span className="text-slate-300">Dauer (Sekunden)</span>
-          <input 
-            type="number" 
-            value={duration}
-            onChange={(e) => setDuration(Number(e.target.value))}
-            className="bg-transparent text-right w-20 outline-none font-mono text-xl"
-            min="5"
-          />
-        </div>
+        <input 
+          type="text" 
+          placeholder="Körperregion (z.B. Hüfte, Schulter)" 
+          value={bodyRegion}
+          onChange={(e) => setBodyRegion(e.target.value)}
+          className="w-full bg-[#1a1a1a] border border-[#333] rounded-xl p-4 text-white outline-none focus:border-emerald-500 transition-colors"
+        />
 
-        <div className="bg-[#1a1a1a] border border-[#333] rounded-xl p-4 flex justify-between items-center">
-          <span className="text-slate-300">Pause danach (Sekunden)</span>
-          <input 
-            type="number" 
-            value={breakDuration}
-            onChange={(e) => setBreakDuration(Number(e.target.value))}
-            className="bg-transparent text-right w-20 outline-none font-mono text-xl"
-            min="0"
-          />
+        <div className="bg-[#1a1a1a] border border-[#333] rounded-xl p-4">
+          <span className="text-slate-300 block mb-3">Wie sehr magst du die Übung? (1-5)</span>
+          <div className="flex justify-between gap-2">
+            {[1, 2, 3, 4, 5].map(num => (
+              <button
+                key={num}
+                onClick={() => setRating(num)}
+                className={`flex-1 py-3 rounded-lg font-bold border transition-all ${
+                  rating === num ? 'bg-emerald-600 border-emerald-500' : 'bg-[#0a0a0a] border-[#333]'
+                }`}
+              >
+                {num}
+              </button>
+            ))}
+          </div>
         </div>
 
         <button 
           onClick={handleSave}
           className="w-full bg-emerald-600 py-4 rounded-xl font-bold mt-4 disabled:opacity-50"
-          disabled={!name.trim() || duration <= 0}
+          disabled={!name.trim() || !bodyRegion.trim()}
         >
-          Übung speichern
+          Übung in Bibliothek speichern
         </button>
       </div>
     </div>
