@@ -3,8 +3,9 @@ import { RoutineRunner } from './components/RoutineRunner';
 import { ProgramGrid } from './components/ProgramGrid';
 import { BottomNav } from './components/BottomNav';
 import { ProgramBuilder } from './components/ProgramBuilder';
+import { ExerciseBuilder } from './components/ExerciseBuilder';
 
-type ViewState = 'menu' | 'active' | 'build';
+type ViewState = 'menu' | 'active' | 'build-program' | 'build-exercise';
 
 export default function App() {
   const [view, setView] = useState<ViewState>('menu');
@@ -24,20 +25,32 @@ export default function App() {
         </div>
       )}
 
-      {view === 'build' && (
+      {view === 'build-program' && (
         <ProgramBuilder onClose={() => setView('menu')} />
+      )}
+
+      {view === 'build-exercise' && (
+        <ExerciseBuilder onClose={() => setView('menu')} />
       )}
 
       {view === 'menu' && (
         <main className="p-6">
           <header className="flex justify-between items-center mb-8">
-            <h1 className="text-2xl font-bold">My Stretch Library</h1>
-            <button 
-              onClick={() => setView('build')} 
-              className="text-3xl text-emerald-500 font-light"
-            >
-              +
-            </button>
+            <h1 className="text-2xl font-bold">Library</h1>
+            <div className="flex gap-2">
+              <button 
+                onClick={() => setView('build-exercise')} 
+                className="text-xs font-bold bg-[#1a1a1a] border border-[#333] px-3 py-2 rounded-lg text-slate-300 hover:border-emerald-500"
+              >
+                + Übung
+              </button>
+              <button 
+                onClick={() => setView('build-program')} 
+                className="text-xs font-bold bg-emerald-900/30 text-emerald-500 border border-emerald-500/30 px-3 py-2 rounded-lg hover:bg-emerald-900/50"
+              >
+                + Programm
+              </button>
+            </div>
           </header>
           
           <ProgramGrid onSelect={(id) => { 
