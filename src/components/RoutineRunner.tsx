@@ -12,9 +12,8 @@ export const RoutineRunner = ({ programId, onClose }: RoutineRunnerProps) => {
   const [index, setIndex] = useState<number>(0);
   const [isBreak, setIsBreak] = useState<boolean>(false);
   
-  // Zustand für den Bewertungs-Screen (1-10)
+  // Zustände für die Ausführungsbewertung und den Session-Speicher
   const [showRatingScreen, setShowRatingScreen] = useState<boolean>(false);
-  // Interner Speicher für die absolvierten und bewerteten Übungen dieser Session
   const [completedExercises, setCompletedExercises] = useState<PerformedExercise[]>([]);
 
   const program = programs.find(p => p.id === programId);
@@ -27,36 +26,35 @@ export const RoutineRunner = ({ programId, onClose }: RoutineRunnerProps) => {
     isBreak ? (currentProgramData?.breakDuration || 0) : (currentProgramData?.duration || 0), 
     () => { 
       if (isBreak) {
-        // Pause ist vorbei -> Weiter zur nächsten Übung
+        // Pause vorbei -> Weiter zur nächsten Übung
         setIsBreak(false);
         setIndex((i: number) => i + 1);
       } else {
-        // Aktive Übung ist vorbei -> Bewertung anzeigen
+        // Übung beendet -> Bewertungs-Bildschirm triggern
         setShowRatingScreen(true);
       }
     }
   );
 
-  // Verarbeitet die Bewertung (1-10) für die aktuelle Übung
+  // Verarbeitet die Vergabe des 1-10 Ratings nach einer aktiven Übung
   const handleRatingSelection = (ratingValue: number) => {
     if (!currentProgramData || !currentExerciseData) return;
 
-    // Aktuelle Übung mit Bewertung zum lokalen Session-Speicher hinzufügen
     const currentPerformed: PerformedExercise = {
       exerciseId: currentProgramData.exerciseId,
       name: currentExerciseData.name,
       side: currentProgramData.side,
       duration: currentProgramData.duration,
-      executionRating: ratingValue
+      executionRating: ratingValue,
+      description: currentExerciseData.description
     };
 
     const updatedExercises = [...completedExercises, currentPerformed];
     setCompletedExercises(updatedExercises);
     setShowRatingScreen(false);
 
-    // Prüfen, ob das die letzte Übung im Programm war
+    // Prüfen, ob die Routine komplett beendet ist
     if (index >= programExercises.length - 1) {
-      // Session ist komplett beendet -> Im globalen Verlauf (Store) speichern
       if (program) {
         addHistoryEntry({
           id: Date.now().toString(),
@@ -72,15 +70,14 @@ export const RoutineRunner = ({ programId, onClose }: RoutineRunnerProps) => {
           completedExercises: updatedExercises
         });
       }
-      // Index erhöhen, um den globalen Abschluss-Screen zu triggern
       setIndex((i: number) => i + 1);
     } else {
-      // Es folgen noch Übungen -> In die Pause wechseln
+      // Wenn noch Übungen anstehen -> in die Pause wechseln
       setIsBreak(true);
     }
   };
 
-  // Abschluss-Screen, wenn alle Übungen durchlaufen und bewertet wurden
+  // Abschluss-Bildschirm nach dem vollständigen Programm-Durchlauf
   if (!currentProgramData || !currentExerciseData || !program) {
     return (
       <div className="flex flex-col items-center justify-center p-6 h-screen text-white gap-8 -mt-10">
@@ -100,7 +97,6 @@ export const RoutineRunner = ({ programId, onClose }: RoutineRunnerProps) => {
     );
   }
 
-  // Hilfsfunktion für die Vorschau der nächsten Übung in der Pause
   const getNextExerciseName = () => {
     const nextProgramData = programExercises[index + 1];
     if (!nextProgramData) return "Fertig";
@@ -109,7 +105,7 @@ export const RoutineRunner = ({ programId, onClose }: RoutineRunnerProps) => {
     return `${nextEx.name} ${nextProgramData.side ? `(${nextProgramData.side})` : ''}`;
   };
 
-  // 1. BEWERTUNGS-SCREEN (Wird direkt nach Ablauf einer Übung eingeblendet)
+  // INTERFACE 1: BEWERTUNGS-MODAL (1-10)
   if (showRatingScreen) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen bg-[#0a0a0a] text-white p-6 gap-6">
@@ -126,7 +122,7 @@ export const RoutineRunner = ({ programId, onClose }: RoutineRunnerProps) => {
             <button
               key={num}
               onClick={() => handleRatingSelection(num)}
-              className="py-4 bg-[#1a1a1a] border border-[#333] rounded-xl font-bold text-lg hover:border-emerald-500 active:bg-emerald-600 transition-colors"
+              className="py-4 bg-[#1a1a1a] border border-[#333] rounded-xl font-bold text-lg active:bg-emerald-600 transition-colors"
             >
               {num}
             </button>
@@ -140,31 +136,44 @@ export const RoutineRunner = ({ programId, onClose }: RoutineRunnerProps) => {
     );
   }
 
-  // 2. REGULÄRER TIMER-SCREEN (Aktiv während Dehnung und Pause)
+  // INTERFACE 2: REGULÄRER TIMER & ANLEITUNG
   return (
-    <div className="flex flex-col items-center p-6 gap-6 text-white pt-24 min-h-screen">
-      <div className="text-center h-24">
-        <p className="text-slate-400 uppercase tracking-widest text-xs mb-2">
+    <div className="flex flex-col items-center p-6 gap-6 text-white pt-16 min-h-screen">
+      <div className="text-center w-full px-2">
+        <p className="text-slate-400 uppercase tracking-widest text-xs mb-1">
           {isBreak ? "Pause" : `Übung ${index + 1} von ${programExercises.length}`}
         </p>
-        <h1 className="text-3xl font-bold">
+        <h1 className="text-3xl font-bold truncate">
           {isBreak ? `Nächste: ${getNextExerciseName()}` : currentExerciseData.name}
         </h1>
         {!isBreak && currentProgramData.side && (
-          <h2 className="text-2xl font-bold text-emerald-500 mt-2">
+          <h2 className="text-xl font-bold text-emerald-500 mt-1">
             Seite: {currentProgramData.side}
           </h2>
         )}
       </div>
 
-      <div className="text-[120px] font-mono font-bold leading-none my-10">{timeLeft}</div>
+      <div className="text-[100px] font-mono font-bold leading-none my-4">{timeLeft}</div>
+
+      {/* Übungsbeschreibung: Sichtbar während der Dehnung, versteckt in der Pause */}
+      {!isBreak && currentExerciseData.description && (
+        <div className="bg-[#1a1a1a] border border-[#333] p-4 rounded-xl text-sm text-slate-300 max-w-md w-full text-center overflow-y-auto max-h-32 shadow-inner">
+          {currentExerciseData.description}
+        </div>
+      )}
+
+      {isBreak && (
+        <div className="text-sm text-slate-500 italic h-16 flex items-center">
+          Bereite dich auf die nächste Dehnung vor...
+        </div>
+      )}
 
       <div className="grid grid-cols-3 gap-4 w-full mt-auto mb-6">
-        <button onClick={toggle} className="bg-slate-800 py-6 rounded-2xl font-bold">
+        <button onClick={toggle} className="bg-slate-800 py-5 rounded-2xl font-bold text-base">
           {isActive ? 'Pause' : 'Start'}
         </button>
-        <button onClick={skip} className="bg-slate-800 py-6 rounded-2xl font-bold">Skip</button>
-        <button onClick={() => window.location.reload()} className="bg-red-900/30 py-6 rounded-2xl font-bold text-red-400">Reset</button>
+        <button onClick={skip} className="bg-slate-800 py-5 rounded-2xl font-bold text-base">Skip</button>
+        <button onClick={() => window.location.reload()} className="bg-red-900/30 py-5 rounded-2xl font-bold text-base text-red-400">Reset</button>
       </div>
     </div>
   );
