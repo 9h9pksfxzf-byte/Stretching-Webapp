@@ -29,35 +29,38 @@ interface AppState {
   programs: Program[];
   addExercise: (ex: Exercise) => void;
   updateExercise: (id: string, updatedEx: Exercise) => void;
+  deleteExercise: (id: string) => void;
   addProgram: (prog: Program) => void;
+  updateProgram: (id: string, updatedProg: Program) => void;
+  deleteProgram: (id: string) => void;
 }
 
 export const useStore = create<AppState>()(
   persist(
     (set) => ({
       library: [
-        { id: '1', name: 'Hüftbeuger (Hip Flexor)', bodyRegion: 'Hüfte', rating: 3, isUnilateral: true },
-        { id: '2', name: 'Hamstrings', bodyRegion: 'Beine', rating: 4, isUnilateral: false },
-        { id: '3', name: 'Glutes / Piriformis', bodyRegion: 'Gesäß', rating: 5, isUnilateral: true },
-        { id: '4', name: 'Adduktoren', bodyRegion: 'Beine', rating: 2, isUnilateral: false },
+        { id: '1', name: 'Hüftbeuger', bodyRegion: 'Hüfte', rating: 3, isUnilateral: true },
       ],
-      programs: [
-        { 
-          id: 'p1', name: 'Kurz', timeLabel: '15 min', icon: '⏱', 
-          exercises: [
-            { exerciseId: '1', duration: 30, breakDuration: 10, side: 'Links' },
-            { exerciseId: '1', duration: 30, breakDuration: 10, side: 'Rechts' },
-            { exerciseId: '3', duration: 30, breakDuration: 10, side: 'Links' },
-            { exerciseId: '3', duration: 30, breakDuration: 10, side: 'Rechts' }
-          ] 
-        }
-      ],
+      programs: [],
       addExercise: (ex) => set((state) => ({ library: [...state.library, ex] })),
       updateExercise: (id, updatedEx) => set((state) => ({
         library: state.library.map((ex) => (ex.id === id ? updatedEx : ex))
       })),
+      deleteExercise: (id) => set((state) => ({
+        library: state.library.filter((ex) => ex.id !== id),
+        programs: state.programs.map(p => ({
+          ...p,
+          exercises: p.exercises.filter(ex => ex.exerciseId !== id)
+        }))
+      })),
       addProgram: (prog) => set((state) => ({ programs: [...state.programs, prog] })),
+      updateProgram: (id, updatedProg) => set((state) => ({
+        programs: state.programs.map((p) => (p.id === id ? updatedProg : p))
+      })),
+      deleteProgram: (id) => set((state) => ({
+        programs: state.programs.filter((p) => p.id !== id)
+      })),
     }),
-    { name: 'stretch-storage-v6' }
+    { name: 'stretch-storage-v8' }
   )
 );
