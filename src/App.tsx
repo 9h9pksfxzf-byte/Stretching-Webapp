@@ -4,7 +4,7 @@ import { ProgramGrid } from './components/ProgramGrid';
 import { BottomNav } from './components/BottomNav';
 import { ProgramBuilder } from './components/ProgramBuilder';
 import { ExerciseBuilder } from './components/ExerciseBuilder';
-import { useStore } from './store/useStore';
+import { useStore, Exercise } from './store/useStore';
 
 type TabState = 'home' | 'library' | 'history' | 'settings';
 type OverlayState = 'none' | 'active' | 'build-program' | 'build-exercise';
@@ -14,8 +14,15 @@ export default function App() {
   const [overlay, setOverlay] = useState<OverlayState>('none');
   const [activeProgramId, setActiveProgramId] = useState<string>('');
   
-  // Lade die Bibliothek für den neuen Bibliothek-Screen
   const library = useStore(state => state.library);
+
+  // Gruppierung der Bibliothek nach Körperregion mittels reduce
+  const groupedLibrary = library.reduce((acc, ex) => {
+    const region = ex.bodyRegion || 'Sonstige';
+    if (!acc[region]) acc[region] = [];
+    acc[region].push(ex);
+    return acc;
+  }, {} as Record<string, Exercise[]>);
 
   // --- OVERLAYS (verdecken die gesamte App inkl. Navigation) ---
   if (overlay === 'active') {
@@ -76,12 +83,22 @@ export default function App() {
                 + Übung
               </button>
             </header>
-            <div className="flex flex-col gap-3">
-              {library.map(ex => (
-                <div key={ex.id} className="bg-[#1a1a1a] border border-[#333] p-4 rounded-xl flex justify-between items-center">
-                  <div>
-                    <p className="font-bold">{ex.name}</p>
-                    <p className="text-xs text-slate-500">Region: {ex.bodyRegion} | Rating: {ex.rating}/5</p>
+            
+            <div className="flex flex-col gap-6">
+              {Object.entries(groupedLibrary).map(([region, exercises]) => (
+                <div key={region}>
+                  <h2 className="text-sm font-bold text-slate-400 uppercase tracking-wider mb-3 border-b border-[#333] pb-2">
+                    {region}
+                  </h2>
+                  <div className="flex flex-col gap-3">
+                    {exercises.map(ex => (
+                      <div key={ex.id} className="bg-[#1a1a1a] border border-[#333] p-4 rounded-xl flex justify-between items-center">
+                        <div>
+                          <p className="font-bold">{ex.name}</p>
+                          <p className="text-xs text-slate-500">Rating: {ex.rating}/5</p>
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 </div>
               ))}
