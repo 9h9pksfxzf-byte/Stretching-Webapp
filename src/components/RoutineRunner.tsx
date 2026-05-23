@@ -2,7 +2,12 @@ import { useState } from 'react';
 import { useStore } from '../store/useStore';
 import { useTimer } from '../hooks/useTimer';
 
-export const RoutineRunner = ({ programId }: { programId: string }) => {
+interface RoutineRunnerProps {
+  programId: string;
+  onClose: () => void;
+}
+
+export const RoutineRunner = ({ programId, onClose }: RoutineRunnerProps) => {
   const { library, programs } = useStore();
   const [index, setIndex] = useState<number>(0);
   const [isBreak, setIsBreak] = useState<boolean>(false);
@@ -12,8 +17,24 @@ export const RoutineRunner = ({ programId }: { programId: string }) => {
   const currentProgramData = programExercises[index];
   const currentExerciseData = library.find(e => e.id === currentProgramData?.exerciseId);
 
+  // Abschluss-Screen, wenn alle Übungen durchlaufen sind
   if (!currentProgramData || !currentExerciseData || !program) {
-    return <div className="p-10 text-center text-2xl text-white">Session Complete!</div>;
+    return (
+      <div className="flex flex-col items-center justify-center p-6 h-screen text-white gap-8 -mt-10">
+        <div className="text-center">
+          <h2 className="text-4xl font-bold mb-4">Geschafft! 🏁</h2>
+          <p className="text-slate-400">
+            Du hast das Programm <strong className="text-white">{program?.name || 'Unbekannt'}</strong> erfolgreich abgeschlossen.
+          </p>
+        </div>
+        <button 
+          onClick={onClose} 
+          className="bg-emerald-600 w-full py-4 rounded-xl font-bold text-lg"
+        >
+          Fertig
+        </button>
+      </div>
+    );
   }
 
   const { timeLeft, isActive, toggle, skip } = useTimer(
@@ -30,20 +51,20 @@ export const RoutineRunner = ({ programId }: { programId: string }) => {
 
   const getNextExerciseName = () => {
     const nextProgramData = programExercises[index + 1];
-    if (!nextProgramData) return "Done";
+    if (!nextProgramData) return "Fertig";
     const nextEx = library.find(e => e.id === nextProgramData.exerciseId);
-    if (!nextEx) return "Done";
+    if (!nextEx) return "Fertig";
     return `${nextEx.name} ${nextProgramData.side ? `(${nextProgramData.side})` : ''}`;
   };
 
   return (
-    <div className="flex flex-col items-center p-6 gap-6 text-white">
-      <div className="text-center">
+    <div className="flex flex-col items-center p-6 gap-6 text-white pt-24">
+      <div className="text-center h-24">
         <p className="text-slate-400 uppercase tracking-widest text-xs mb-2">
-          {isBreak ? "Break" : `Exercise ${index + 1} of ${programExercises.length}`}
+          {isBreak ? "Pause" : `Übung ${index + 1} von ${programExercises.length}`}
         </p>
         <h1 className="text-3xl font-bold">
-          {isBreak ? `Next: ${getNextExerciseName()}` : currentExerciseData.name}
+          {isBreak ? `Nächste: ${getNextExerciseName()}` : currentExerciseData.name}
         </h1>
         {!isBreak && currentProgramData.side && (
           <h2 className="text-2xl font-bold text-emerald-500 mt-2">
@@ -52,9 +73,9 @@ export const RoutineRunner = ({ programId }: { programId: string }) => {
         )}
       </div>
 
-      <div className="text-[120px] font-mono font-bold leading-none">{timeLeft}</div>
+      <div className="text-[120px] font-mono font-bold leading-none my-10">{timeLeft}</div>
 
-      <div className="grid grid-cols-3 gap-4 w-full">
+      <div className="grid grid-cols-3 gap-4 w-full mt-auto">
         <button onClick={toggle} className="bg-slate-800 py-6 rounded-2xl font-bold">
           {isActive ? 'Pause' : 'Start'}
         </button>
