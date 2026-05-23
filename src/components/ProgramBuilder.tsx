@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useStore, Exercise } from '../store/useStore';
+import { useStore, ProgramExercise } from '../store/useStore';
 
 interface ProgramBuilderProps {
   onClose: () => void;
@@ -8,30 +8,46 @@ interface ProgramBuilderProps {
 export const ProgramBuilder = ({ onClose }: ProgramBuilderProps) => {
   const { library, addProgram } = useStore();
   const [name, setName] = useState('');
-  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [programExercises, setProgramExercises] = useState<ProgramExercise[]>([]);
 
-  const toggleExercise = (id: string) => {
-    setSelectedIds(prev => 
-      prev.includes(id) ? prev.filter(e => e !== id) : [...prev, id]
-    );
+  const addExerciseToProgram = (exerciseId: string) => {
+    setProgramExercises(prev => [
+      ...prev, 
+      { exerciseId, duration: 60, breakDuration: 10 }
+    ]);
+  };
+
+  const removeExerciseFromProgram = (index: number) => {
+    setProgramExercises(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const updateTime = (index: number, field: 'duration' | 'breakDuration', value: number) => {
+    setProgramExercises(prev => {
+      const copy = [...prev];
+      copy[index] = { ...copy[index], [field]: value };
+      return copy;
+    });
   };
 
   const handleSave = () => {
-    if (!name || selectedIds.length === 0) return;
+    if (!name || programExercises.length === 0) return;
     
+    const totalSeconds = programExercises.reduce((acc, curr) => acc + curr.duration + curr.breakDuration, 0);
+    const minutes = Math.round(totalSeconds / 60);
+
     addProgram({
       id: Date.now().toString(),
       name,
-      timeLabel: `${selectedIds.length * 2} min`, // Dummy-Berechnung für die Optik
+      timeLabel: `${minutes} min`,
       icon: '🔥',
-      exerciseIds: selectedIds
+      exercises: programExercises
     });
     
     onClose();
   };
 
   return (
-    <div className="p-6 text-white pb-24">
+    <div className="p-6 text-white pb-32">
       <header className="flex justify-between items-center mb-8">
         <h2 className="text-2xl font-bold">Neues Programm</h2>
         <button onClick={onClose} className="text-slate-400">Abbrechen</button>
@@ -42,32 +58,61 @@ export const ProgramBuilder = ({ onClose }: ProgramBuilderProps) => {
         placeholder="Name (z.B. Morning Routine)" 
         value={name}
         onChange={(e) => setName(e.target.value)}
-        className="w-full bg-[#1a1a1a] border border-[#333] rounded-xl p-4 mb-6 text-white outline-none focus:border-emerald-500 transition-colors"
+        className="w-full bg-[#1a1a1a] border border-[#333] rounded-xl p-4 mb-6 text-white outline-none focus:border-emerald-500"
       />
 
-      <h3 className="text-slate-400 mb-4">Übungen auswählen:</h3>
-      <div className="flex flex-col gap-3 mb-8">
-        {library.map((ex: Exercise) => (
-          <button 
-            key={ex.id}
-            onClick={() => toggleExercise(ex.id)}
-            className={`p-4 rounded-xl text-left border transition-all ${
-              selectedIds.includes(ex.id) 
-                ? 'border-emerald-500 bg-emerald-900/20' 
-                : 'border-[#333] bg-[#1a1a1a]'
-            }`}
-          >
-            {ex.name} <span className="text-slate-500 text-sm">({ex.duration}s)</span>
-          </button>
-        ))}
+      <div className="mb-8">
+        <h3 className="text-slate-400 mb-4">Übungen im Programm:</h3>
+        {programExercises.length === 0 && <p className="text-sm text-slate-500">Noch keine Übungen hinzugefügt.</p>}
+        
+        <div className="flex flex-col gap-3">
+          {programExercises.map((pEx, index) => {
+            const exInfo = library.find(e => e.id === pEx.exerciseId);
+            if (!exInfo) return null;
+            return (
+              <div key={`${pEx.exerciseId}-${index}`} className="bg-[#1a1a1a] border border-[#333] rounded-xl p-4">
+                <div className="flex justify-between items-center mb-3">
+                  <span className="font-bold">{exInfo.name} <span className="text-xs text-slate-500">({exInfo.bodyRegion})</span></span>
+                  <button onClick={() => removeExerciseFromProgram(index)} className="text-red-500 text-sm">Entfernen</button>
+                </div>
+                <div className="flex gap-4">
+                  <div className="flex flex-col w-1/2">
+                    <label className="text-xs text-slate-400 mb-1">Dauer (s)</label>
+                    <input type="number" value={pEx.duration} onChange={(e) => updateTime(index, 'duration', Number(e.target.value))} className="bg-[#0a0a0a] rounded p-2 text-center border border-[#333]"/>
+                  </div>
+                  <div className="flex flex-col w-1/2">
+                    <label className="text-xs text-slate-400 mb-1">Pause (s)</label>
+                    <input type="number" value={pEx.breakDuration} onChange={(e) => updateTime(index, 'breakDuration', Number(e.target.value))} className="bg-[#0a0a0a] rounded p-2 text-center border border-[#333]"/>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      <div className="mb-8 border-t border-[#333] pt-6">
+        <h3 className="text-slate-400 mb-4">Aus Bibliothek hinzufügen:</h3>
+        <div className="flex gap-2 overflow-x-auto pb-4">
+          {library.map((ex) => (
+            <button 
+              key={ex.id}
+              onClick={() => addExerciseToProgram(ex.id)}
+              className="whitespace-nowrap px-4 py-2 bg-[#1a1a1a] border border-[#333] rounded-full text-sm hover:border-emerald-500 shrink-0"
+            >
+              + {ex.name}
+            </button>
+          ))}
+        </div>
       </div>
 
       <button 
         onClick={handleSave}
-        className="w-full bg-emerald-600 py-4 rounded-xl font-bold disabled:opacity-50"
-        disabled={!name || selectedIds.length === 0}
+        className="w-full bg-emerald-600 py-4 rounded-xl font-bold disabled:opacity-50 fixed bottom-6 left-6 right-6"
+        style={{ width: 'calc(100% - 48px)' }}
+        disabled={!name || programExercises.length === 0}
       >
-        Speichern
+        Programm speichern
       </button>
     </div>
   );
