@@ -5,19 +5,32 @@ interface ExerciseBuilderProps {
   onClose: () => void;
 }
 
+const BODY_REGIONS = [
+  'Nacken',
+  'Schultern',
+  'Brust',
+  'Rücken',
+  'Rumpf',
+  'Hüfte',
+  'Gesäß',
+  'Beine',
+  'Waden',
+  'Ganzkörper'
+];
+
 export const ExerciseBuilder = ({ onClose }: ExerciseBuilderProps) => {
   const addExercise = useStore(state => state.addExercise);
   const [name, setName] = useState<string>('');
-  const [bodyRegion, setBodyRegion] = useState<string>('');
+  const [bodyRegion, setBodyRegion] = useState<string>(BODY_REGIONS[0]);
   const [rating, setRating] = useState<number>(3);
 
   const handleSave = () => {
-    if (!name.trim() || !bodyRegion.trim()) return;
+    if (!name.trim() || !bodyRegion) return;
     
     addExercise({
       id: Date.now().toString(),
       name: name.trim(),
-      bodyRegion: bodyRegion.trim(),
+      bodyRegion: bodyRegion,
       rating
     });
     
@@ -40,13 +53,20 @@ export const ExerciseBuilder = ({ onClose }: ExerciseBuilderProps) => {
           className="w-full bg-[#1a1a1a] border border-[#333] rounded-xl p-4 text-white outline-none focus:border-emerald-500 transition-colors"
         />
 
-        <input 
-          type="text" 
-          placeholder="Körperregion (z.B. Hüfte, Schulter)" 
-          value={bodyRegion}
-          onChange={(e) => setBodyRegion(e.target.value)}
-          className="w-full bg-[#1a1a1a] border border-[#333] rounded-xl p-4 text-white outline-none focus:border-emerald-500 transition-colors"
-        />
+        <div className="relative">
+          <select 
+            value={bodyRegion}
+            onChange={(e) => setBodyRegion(e.target.value)}
+            className="w-full bg-[#1a1a1a] border border-[#333] rounded-xl p-4 text-white outline-none focus:border-emerald-500 transition-colors appearance-none cursor-pointer"
+          >
+            {BODY_REGIONS.map(region => (
+              <option key={region} value={region}>{region}</option>
+            ))}
+          </select>
+          <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-slate-400">
+            ▼
+          </div>
+        </div>
 
         <div className="bg-[#1a1a1a] border border-[#333] rounded-xl p-4">
           <span className="text-slate-300 block mb-3">Wie sehr magst du die Übung? (1-5)</span>
@@ -68,7 +88,7 @@ export const ExerciseBuilder = ({ onClose }: ExerciseBuilderProps) => {
         <button 
           onClick={handleSave}
           className="w-full bg-emerald-600 py-4 rounded-xl font-bold mt-4 disabled:opacity-50"
-          disabled={!name.trim() || !bodyRegion.trim()}
+          disabled={!name.trim() || !bodyRegion}
         >
           Übung in Bibliothek speichern
         </button>
