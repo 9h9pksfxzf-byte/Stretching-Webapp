@@ -11,10 +11,21 @@ export const ProgramBuilder = ({ onClose }: ProgramBuilderProps) => {
   const [programExercises, setProgramExercises] = useState<ProgramExercise[]>([]);
 
   const addExerciseToProgram = (exerciseId: string) => {
-    setProgramExercises(prev => [
-      ...prev, 
-      { exerciseId, duration: 60, breakDuration: 10 }
-    ]);
+    const exercise = library.find(e => e.id === exerciseId);
+    if (!exercise) return;
+
+    if (exercise.isUnilateral) {
+      setProgramExercises(prev => [
+        ...prev, 
+        { exerciseId, duration: 60, breakDuration: 10, side: 'Links' },
+        { exerciseId, duration: 60, breakDuration: 10, side: 'Rechts' }
+      ]);
+    } else {
+      setProgramExercises(prev => [
+        ...prev, 
+        { exerciseId, duration: 60, breakDuration: 10 }
+      ]);
+    }
   };
 
   const removeExerciseFromProgram = (index: number) => {
@@ -72,7 +83,9 @@ export const ProgramBuilder = ({ onClose }: ProgramBuilderProps) => {
             return (
               <div key={`${pEx.exerciseId}-${index}`} className="bg-[#1a1a1a] border border-[#333] rounded-xl p-4">
                 <div className="flex justify-between items-center mb-3">
-                  <span className="font-bold">{exInfo.name} <span className="text-xs text-slate-500">({exInfo.bodyRegion})</span></span>
+                  <span className="font-bold">
+                    {exInfo.name} {pEx.side && <span className="text-emerald-500">({pEx.side})</span>}
+                  </span>
                   <button onClick={() => removeExerciseFromProgram(index)} className="text-red-500 text-sm">Entfernen</button>
                 </div>
                 <div className="flex gap-4">
@@ -100,7 +113,7 @@ export const ProgramBuilder = ({ onClose }: ProgramBuilderProps) => {
               onClick={() => addExerciseToProgram(ex.id)}
               className="whitespace-nowrap px-4 py-2 bg-[#1a1a1a] border border-[#333] rounded-full text-sm hover:border-emerald-500 shrink-0"
             >
-              + {ex.name}
+              + {ex.name} {ex.isUnilateral && '(2x)'}
             </button>
           ))}
         </div>
