@@ -11,7 +11,7 @@ export const ExerciseBuilder = ({ exerciseId, onClose }: ExerciseBuilderProps) =
 
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
-  const [bodyRegion, setBodyRegion] = useState('Hüfte');
+  const [bodyRegion, setBodyRegion] = useState('Hüftbeuger (M. iliopsoas)');
   const [isUnilateral, setIsUnilateral] = useState(false);
   const [rating, setRating] = useState(5);
 
@@ -38,7 +38,7 @@ export const ExerciseBuilder = ({ exerciseId, onClose }: ExerciseBuilderProps) =
       bodyRegion,
       isUnilateral,
       rating,
-      duration: 30, // Standard-Fallback für das Basis-Interface
+      duration: 30,
     };
 
     if (exerciseId) {
@@ -50,14 +50,14 @@ export const ExerciseBuilder = ({ exerciseId, onClose }: ExerciseBuilderProps) =
   };
 
   return (
-    <div className="flex flex-col text-slate-100 bg-gradient-to-b from-[#0d0f12] via-[#08090a] to-[#030405] h-[100dvh] fixed inset-0 box-border overflow-hidden p-5 select-none max-w-lg mx-auto">
+    <div className="flex flex-col text-slate-100 bg-gradient-to-b from-[#0d0f12] via-[#08090a] to-[#030405] h-[100dvh] fixed inset-0 box-border overflow-hidden p-5 select-none max-w-lg mx-auto z-50">
       <header className="flex justify-between items-center pt-4 pb-2 flex-shrink-0">
         <div>
           <h1 className="text-xl font-black tracking-tight text-white">
             {exerciseId ? 'Übung bearbeiten' : 'Neue Übung'}
           </h1>
           <p className="text-sky-400/80 font-medium text-[10px] tracking-wider uppercase mt-0.5">
-            Bibliotheks-Konfiguration
+            Anatomische Spezifikation
           </p>
         </div>
         <button
@@ -75,23 +75,39 @@ export const ExerciseBuilder = ({ exerciseId, onClose }: ExerciseBuilderProps) =
             type="text"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            placeholder="z.B. Quadrizeps Stretch"
+            placeholder="z.B. Couch Stretch"
             className="w-full bg-white/[0.02] border border-white/[0.06] rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-sky-500 text-slate-200 placeholder-slate-600 transition-colors"
           />
         </div>
 
         <div>
-          <label className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block mb-1.5 pl-1">Körperregion</label>
+          <label className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block mb-1.5 pl-1">Präzise Muskelgruppe (Zielregion)</label>
           <select
             value={bodyRegion}
             onChange={(e) => setBodyRegion(e.target.value)}
             className="w-full bg-[#0d1013] border border-white/[0.06] rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-sky-500 text-slate-200 transition-colors"
           >
-            <option value="Hüfte">📍 Hüfte</option>
-            <option value="Beine">📍 Beine</option>
-            <option value="Oberkörper">📍 Oberkörper</option>
-            <option value="Rücken">📍 Rücken</option>
-            <option value="Sonstige">📍 Sonstige</option>
+            <optgroup label="Hüfte & Becken">
+              <option value="Hüftbeuger (M. iliopsoas)">🔹 Hüftbeuger (M. iliopsoas)</option>
+              <option value="Glutealmuskulatur (Gesäß)">🔹 Glutealmuskulatur (Gesäß)</option>
+              <option value="Piriformis & Außenrotatoren">🔹 Piriformis & Außenrotatoren</option>
+            </optgroup>
+            <optgroup label="Oberschenkel & Unterschenkel">
+              <option value="Ischiocrurale Muskulatur (Hamstrings)">🔹 Ischiocrurale Muskulatur (Hamstrings)</option>
+              <option value="Oberschenkelvorderseite (Quadrizeps)">🔹 Oberschenkelvorderseite (Quadrizeps)</option>
+              <option value="Adduktoren (Oberschenkelinnenseite)">🔹 Adduktoren (Oberschenkelinnenseite)</option>
+              <option value="Wadenmuskulatur (M. gastrocnemius/soleus)">🔹 Wadenmuskulatur (M. gastrocnemius/soleus)</option>
+            </optgroup>
+            <optgroup label="Rücken & Rumpf">
+              <option value="Lendenwirbelsäule & Unterer Rücken">🔹 Lendenwirbelsäule & Unterer Rücken</option>
+              <option value="Brustwirbelsäule & Übertragener Rumpf">🔹 Brustwirbelsäule & Übertragener Rumpf</option>
+              <option value="M. latissimus dorsi (Seitlicher Rücken)">🔹 M. latissimus dorsi (Seitlicher Rücken)</option>
+            </optgroup>
+            <optgroup label="Oberkörper & Nacken">
+              <option value="Brustmuskulatur (M. pectoralis)">🔹 Brustmuskulatur (M. pectoralis)</option>
+              <option value="Hals- & Nackenmuskulatur (Trapezius)">🔹 Hals- & Nackenmuskulatur (Trapezius)</option>
+              <option value="Schulthergürtel (Rotatorenmanschette)">🔹 Schultergürtel (Rotatorenmanschette)</option>
+            </optgroup>
           </select>
         </div>
 
@@ -109,11 +125,11 @@ export const ExerciseBuilder = ({ exerciseId, onClose }: ExerciseBuilderProps) =
         </div>
 
         <div>
-          <label className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block mb-1.5 pl-1">Anleitung / Beschreibung</label>
+          <label className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block mb-1.5 pl-1">Spezifische Ausführungshinweise</label>
           <textarea
             value={description}
             onChange={(e) => setDescription(e.target.value)}
-            placeholder="Präzise Bewegungsausführung beschreiben..."
+            placeholder="z.B. Becken aktiv aufrichten, um den M. rectus femoris isoliert zu treffen..."
             rows={4}
             className="w-full bg-white/[0.02] border border-white/[0.06] rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-sky-500 text-slate-200 placeholder-slate-600 transition-colors resize-none leading-relaxed"
           />
@@ -129,15 +145,11 @@ export const ExerciseBuilder = ({ exerciseId, onClose }: ExerciseBuilderProps) =
             onChange={(e) => setRating(Number(e.target.value))}
             className="w-full accent-sky-500 h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer"
           />
-          <div className="flex justify-between text-[9px] text-slate-500 font-mono mt-1 px-1">
-            <span>1 = Optional</span>
-            <span>5 = Essentiell</span>
-          </div>
         </div>
 
         <button
           type="submit"
-          className="w-full py-4 mt-6 rounded-xl font-bold text-sm uppercase tracking-wider bg-gradient-to-r from-sky-600 to-sky-500 text-white shadow-[0_4px_15px_rgba(56,189,248,0.2)] transition-all active:scale-[0.98]"
+          className="w-full py-4 mt-6 rounded-xl font-bold text-sm uppercase tracking-wider bg-gradient-to-r from-sky-600 to-sky-500 text-white shadow-[0_4px_15px_rgba(56,189,248,0.2)]"
         >
           Übung in Bibliothek sichern
         </button>
