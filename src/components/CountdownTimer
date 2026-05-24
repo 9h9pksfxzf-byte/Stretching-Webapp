@@ -1,0 +1,174 @@
+import React, { useState, useEffect, useRef } from 'react';
+
+interface CountdownTimerProps {
+  initialDuration: number; // Gesamtdauer der Übung in Sekunden
+  onComplete?: () => void;
+}
+
+export const CountdownTimer: React.FC<CountdownTimerProps> = ({
+  initialDuration,
+  onComplete,
+}) => {
+  const [timeLeft, setTimeLeft] = useState<number>(initialDuration);
+  const [isActive, setIsActive] = useState<boolean>(false);
+  
+  // AudioContext-Referenz, um den Audio-Graph im Speicher zu halten
+  const audioCtxRef = useRef<AudioContext | null>(null);
+
+  // Initialisiert den AudioContext sicher nach Benutzerinteraktion
+  const initAudio = () => {
+    if (!audioCtxRef.current) {
+      audioCtxRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
+    }
+    if (audioCtxRef.current.state === 'suspended') {
+      audioCtxRef.current.resume();
+    }
+  };
+
+  // Synthetisiert einen Ton mit definierter Frequenz, Dauer und Lautstärken-Hüllkurve
+  const playTone = (frequency: number, duration: number, type: 'sine' | 'square' = 'sine') => {
+    try {
+      initAudio();
+      const ctx = audioCtxRef.current;
+      if (!ctx) return;
+
+      const oscillator = ctx.createOscillator();
+      const gainNode = ctx.createGain();
+
+      oscillator.type = type;
+      oscillator.frequency.setValueAtTime(frequency, ctx.currentTime);
+
+      // Linearer Lautstärkenabfall (Gain Envelope), um Knackgeräusche zu verhindern
+      gainNode.gain.setValueAtTime(0.2, ctx.currentTime); 
+      gainNode.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + duration);
+
+      oscillator.connect(gainNode);
+      gainNode.connect(ctx.destination);
+
+      oscillator.start();
+      oscillator.stop(ctx.currentTime + duration);
+    } catch (error) {
+      console.warn("Audio-Wiedergabe vom Browser blockiert:", error);
+    }
+  };
+
+  useEffect(() => {
+    let timerId: NodeJS.Timeout;
+
+    if (isActive && timeLeft > 0) {
+      timerId = setTimeout(() => {
+        const nextTime = timeLeft - 1;
+        
+        // Signal-Logik für die letzten 3 Sekunden
+        if (nextTime === 2 || nextTime === 1) {
+          // Hoher, kurzer Piepton für den Countdown (880 Hz / A5)
+          playTone(880, 0.1, 'sine');
+        } else if (nextTime === 0) {
+          // Tieferer, längerer und satterer Abschlusston (440 Hz / A4 im Rechteck-Modus)
+          playTone(440, 0.4, 'square');
+          setIsActive(false);
+          if (onComplete) onComplete();
+        }
+
+        setTimeLeft(nextTime);
+      }, 1000);
+    }
+
+    return () => clearTimeout(timerId);
+  }, [timeLeft, isActive]);
+
+  const handleStartStop = () => {
+    initAudio(); // Wichtig für iOS/iPadOS Sicherheitsbarrieren
+    setIsActive(!isActive);
+  };
+
+  const handleReset = () => {
+    setIsActive(false);
+    setTimeLeft(initialDuration);
+  };
+
+  // Hilfsfunktion zur Formatierung der MM:SS Anzeige
+  const formatTime = (seconds: number): string => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  // Bestimmt die CSS-Klassen für die visuelle Hervorhebung der letzten 3 Sekunden
+  const isCriticalZone = timeLeft <= 3 && timeLeft > 0;
+
+  return (
+    <div style={styles.container}>
+      <div style={{ 
+        ...styles.timerDisplay, 
+        ...(isCriticalZone ? styles.criticalText : {}) 
+      }}>
+        {formatTime(timeLeft)}
+      </div>
+      
+      {isCriticalZone && (
+        <div style={styles.alertNotice}>
+          Nächste Übung in {timeLeft} ...
+        </div>
+      )}
+
+      <div style={styles.buttonContainer}>
+        <button onClick={handleStartStop} style={styles.button}>
+          {isActive ? 'Pause' : 'Start'}
+        </button>
+        <button onClick={handleReset} style={{ ...styles.button, ...styles.resetButton }}>
+          Reset
+        </button>
+      </div>
+    </div>
+  );
+};
+
+const styles = {
+  container: {
+    display: 'flex',
+    flexDirection: 'column' as const,
+    alignItems: 'center',
+    padding: '20px',
+    background: '#1a1a1a',
+    borderRadius: '12px',
+    width: '280px',
+    margin: '20px auto',
+    boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+  },
+  timerDisplay: {
+    fontSize: '48px',
+    fontWeight: 'bold' as const,
+    fontFamily: 'monospace',
+    color: '#00e676',
+    transition: 'color 0.2s ease',
+  },
+  criticalText: {
+    color: '#ff1744', // Signalrot für die letzten 3 Sekunden
+    transform: 'scale(1.05)',
+  },
+  alertNotice: {
+    color: '#ff1744',
+    fontSize: '14px',
+    marginTop: '8px',
+    fontWeight: 'bold' as const,
+  },
+  buttonContainer: {
+    display: 'flex',
+    gap: '12px',
+    marginTop: '20px',
+  },
+  button: {
+    padding: '10px 20px',
+    fontSize: '16px',
+    fontWeight: 'bold' as const,
+    border: 'none',
+    borderRadius: '6px',
+    cursor: 'pointer',
+    background: '#2979ff',
+    color: '#fff',
+  },
+  resetButton: {
+    background: '#555',
+  }
+};
