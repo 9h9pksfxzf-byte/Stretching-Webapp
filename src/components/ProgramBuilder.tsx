@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useStore } from '../store/useStore';
+import { useStore, ProgramExercise } from '../store/useStore';
 
 interface ProgramBuilderProps {
   programId: string | null;
@@ -16,7 +16,6 @@ export const ProgramBuilder = ({ programId, onClose }: ProgramBuilderProps) => {
   const { library, programs, addProgram, updateProgram } = useStore();
 
   const [name, setName] = useState('');
-  const [timeLabel, setTimeLabel] = useState('Morgens');
   const [selectedExercises, setSelectedExercises] = useState<LocalSelectedExercise[]>([]);
 
   useEffect(() => {
@@ -24,8 +23,14 @@ export const ProgramBuilder = ({ programId, onClose }: ProgramBuilderProps) => {
       const prog = programs.find((p) => p.id === programId);
       if (prog) {
         setName(prog.name);
-        setTimeLabel(prog.timeLabel || 'Morgens');
-        setSelectedExercises(prog.exercises || []);
+        
+        // Mapping stellt sicher, dass breakDuration niemals undefined an den lokalen Zustand geht
+        const mappedExercises = (prog.exercises || []).map((ex) => ({
+          exerciseId: ex.exerciseId,
+          duration: ex.duration,
+          breakDuration: ex.breakDuration ?? 15, // Fallback auf 15 Sekunden
+        }));
+        setSelectedExercises(mappedExercises);
       }
     }
   }, [programId, programs]);
@@ -51,10 +56,10 @@ export const ProgramBuilder = ({ programId, onClose }: ProgramBuilderProps) => {
     e.preventDefault();
     if (!name.trim() || selectedExercises.length === 0) return;
 
+    // Entspricht exakt der Definition im Store-Interface (ohne timeLabel)
     const programData = {
       name,
-      timeLabel,
-      exercises: selectedExercises,
+      exercises: selectedExercises as ProgramExercise[],
     };
 
     if (programId) {
@@ -66,7 +71,7 @@ export const ProgramBuilder = ({ programId, onClose }: ProgramBuilderProps) => {
   };
 
   return (
-    <div className="flex flex-col text-slate-100 bg-gradient-to-b from-[#0d0f12] via-[#08090a] to-[#030405] h-[100dvh] fixed inset-0 box-border overflow-hidden p-5 select-none max-w-lg mx-auto">
+    <div className="flex flex-col text-slate-100 bg-gradient-to-b from-[#0d0f12] via-[#08090a] to-[#030405] h-[100dvh] fixed inset-0 box-border overflow-hidden p-5 select-none max-w-lg mx-auto z-50">
       <header className="flex justify-between items-center pt-4 pb-2 flex-shrink-0">
         <div>
           <h1 className="text-xl font-black tracking-tight text-white">
@@ -92,22 +97,8 @@ export const ProgramBuilder = ({ programId, onClose }: ProgramBuilderProps) => {
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="z.B. Full Body Flow"
-            className="w-full bg-white/[0.02] border border-white/[0.06] rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-emerald-500 text-slate-200 placeholder-slate-600"
+            className="w-full bg-white/[0.02] border border-white/[0.06] rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-emerald-500 text-slate-200 placeholder-slate-600 transition-colors"
           />
-        </div>
-
-        <div>
-          <label className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block mb-1.5 pl-1">Zugeordnete Tageszeit</label>
-          <select
-            value={timeLabel}
-            onChange={(e) => setTimeLabel(e.target.value)}
-            className="w-full bg-[#0d1013] border border-white/[0.06] rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-emerald-500 text-slate-200"
-          >
-            <option value="Morgens">🌅 Morgens</option>
-            <option value="Mittags">☀️ Mittags</option>
-            <option value="Abends">🌌 Abends</option>
-            <option value="Flexibel">🔄 Flexibel</option>
-          </select>
         </div>
 
         {/* Ausgewählte Übungen im Programm */}
@@ -118,47 +109,51 @@ export const ProgramBuilder = ({ programId, onClose }: ProgramBuilderProps) => {
               Füge unten Übungen aus der Bibliothek hinzu.
             </div>
           ) : (
-            selectedExercises.map((slot, idx) => {
-              const exData = library.find((e) => e.id === slot.exerciseId);
-              return (
-                <div key={idx} className="bg-white/[0.02] border border-white/[0.04] p-3.5 rounded-xl flex flex-col gap-3">
-                  <div className="flex justify-between items-center">
-                    <div>
-                      <span className="text-[10px] font-mono font-bold bg-white/[0.05] px-1.5 py-0.5 rounded text-slate-400 mr-2">#{idx+1}</span>
-                      <span className="text-xs font-bold text-slate-200">{exData?.name || 'Gelöschte Übung'}</span>
+            <div className="space-y-2">
+              {selectedExercises.map((slot, idx) => {
+                const exData = library.find((e) => e.id === slot.exerciseId);
+                return (
+                  <div key={idx} className="bg-white/[0.02] border border-white/[0.04] p-3.5 rounded-xl flex flex-col gap-3">
+                    <div className="flex justify-between items-center">
+                      <div>
+                        <span className="text-[10px] font-mono font-bold bg-white/[0.05] px-1.5 py-0.5 rounded text-slate-400 mr-2">#{idx+1}</span>
+                        <span className="text-xs font-bold text-slate-200">{exData?.name || 'Gelöschte Übung'}</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveSlot(idx)}
+                        className="text-[10px] text-red-400 bg-red-500/10 px-2 py-1 rounded-lg border border-red-500/10 active:scale-90"
+                      >
+                        Entfernen
+                      </button>
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => handleRemoveSlot(idx)}
-                      className="text-[10px] text-red-400 bg-red-500/10 px-2 py-1 rounded-lg border border-red-500/10 active:scale-90"
-                    >
-                      Entfernen
-                    </button>
-                  </div>
 
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="text-[9px] text-slate-500 uppercase tracking-wider block mb-1">Dauer (Sekunden)</label>
-                      <input
-                        type="number"
-                        value={slot.duration}
-                        onChange={(e) => handleUpdateSlot(idx, 'duration', Number(e.target.value))}
-                        className="w-full bg-slate-950 border border-white/[0.04] rounded-lg px-2.5 py-1.5 font-mono text-xs text-slate-200"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-[9px] text-slate-500 uppercase tracking-wider block mb-1">Pause (Sekunden)</label>
-                      <input
-                        type="number"
-                        value={slot.breakDuration}
-                        onChange={(e) => handleUpdateSlot(idx, 'breakDuration', Number(e.target.value))}
-                        className="w-full bg-slate-950 border border-white/[0.04] rounded-lg px-2.5 py-1.5 font-mono text-xs text-slate-200"
-                      />
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="text-[9px] text-slate-500 uppercase tracking-wider block mb-1">Dauer (Sekunden)</label>
+                        <input
+                          type="number"
+                          value={slot.duration}
+                          min="5"
+                          onChange={(e) => handleUpdateSlot(idx, 'duration', Number(e.target.value))}
+                          className="w-full bg-slate-950 border border-white/[0.04] rounded-lg px-2.5 py-1.5 font-mono text-xs text-slate-200"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-[9px] text-slate-500 uppercase tracking-wider block mb-1">Pause (Sekunden)</label>
+                        <input
+                          type="number"
+                          value={slot.breakDuration}
+                          min="0"
+                          onChange={(e) => handleUpdateSlot(idx, 'breakDuration', Number(e.target.value))}
+                          className="w-full bg-slate-950 border border-white/[0.04] rounded-lg px-2.5 py-1.5 font-mono text-xs text-slate-200"
+                        />
+                      </div>
                     </div>
                   </div>
-                </div>
-              );
-            })
+                );
+              })}
+            </div>
           )}
         </div>
 
@@ -171,13 +166,13 @@ export const ProgramBuilder = ({ programId, onClose }: ProgramBuilderProps) => {
                 key={ex.id}
                 type="button"
                 onClick={() => handleAddExerciseSlot(ex.id)}
-                className="w-full text-left bg-white/[0.01] hover:bg-white/[0.03] border border-white/[0.03] p-2.5 rounded-xl flex justify-between items-center text-xs active:scale-[0.99]"
+                className="w-full text-left bg-white/[0.01] hover:bg-white/[0.03] border border-white/[0.03] p-2.5 rounded-xl flex justify-between items-center text-xs active:scale-[0.99] transition-all"
               >
-                <div>
-                  <span className="font-bold text-slate-300">{ex.name}</span>
-                  <span className="text-[9px] text-slate-500 ml-2">({ex.bodyRegion})</span>
+                <div className="min-w-0 flex-1 pr-2">
+                  <div className="font-bold text-slate-300 truncate">{ex.name}</div>
+                  <div className="text-[9px] text-slate-500 truncate mt-0.5">{ex.bodyRegion}</div>
                 </div>
-                <span className="text-emerald-400 font-bold text-sm bg-emerald-500/10 w-6 h-6 rounded-lg flex items-center justify-center">+</span>
+                <span className="text-emerald-400 font-bold text-sm bg-emerald-500/10 w-6 h-6 rounded-lg flex items-center justify-center shrink-0">+</span>
               </button>
             ))}
           </div>
