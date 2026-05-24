@@ -4,6 +4,7 @@ import { ProgramGrid } from './components/ProgramGrid';
 import { BottomNav } from './components/BottomNav';
 import { ProgramBuilder } from './components/ProgramBuilder';
 import { ExerciseBuilder } from './components/ExerciseBuilder';
+import { HistoryView } from './components/HistoryView'; // Fehlender Import hinzugefügt!
 import { useStore, Exercise } from './store/useStore';
 
 type TabState = 'home' | 'library' | 'history' | 'settings';
@@ -119,6 +120,11 @@ export default function App() {
               ))}
             </div>
           </section>
+        )}
+
+        {/* VERLAUF (Hier wurde die Lücke geschlossen!) */}
+        {currentTab === 'history' && (
+          <HistoryView />
         )}
 
         {/* EINSTELLUNGEN */}
