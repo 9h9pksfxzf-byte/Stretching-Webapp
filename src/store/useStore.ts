@@ -1,12 +1,26 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 
+// 11 anatomisch präzise, nach Funktionsketten getrennte Regionen
+export type BodyRegion = 
+  | 'Hals & Nacken'
+  | 'BWS & Thorax (Rotation/Extension)'
+  | 'LWS & Core (Rumpfstabilität)'
+  | 'Brust & Schultervorderseite'
+  | 'Oberer Rücken & Schulterrückseite'
+  | 'Arme & Handgelenke'
+  | 'Hüftbeuger & Quadrizeps (Anterior)'
+  | 'Ischiocrurale Muskulatur (Hamstrings)'
+  | 'Hüftstrecker & Gesäß (Posterior)'
+  | 'Adduktoren (Medial)'
+  | 'Unterschenkel & Fuß (Fundament)';
+
 export interface PerformedExercise {
   name: string;
   duration: number; // in Sekunden
   executionRating: number; // 1-10
   side: 'Links' | 'Rechts' | 'Beide';
-  bodyRegion: string;
+  bodyRegion: BodyRegion | 'Allgemein';
 }
 
 export interface HistoryEntry {
@@ -19,7 +33,7 @@ export interface Exercise {
   id: string;
   name: string;
   description?: string;
-  bodyRegion: string;
+  bodyRegion: BodyRegion;
   isUnilateral: boolean;
   rating?: number;
   duration?: number;
@@ -51,13 +65,13 @@ interface StoreState {
   clearHistory: () => void;
 }
 
-// Standard-Bibliothek mit den neuen, hochpräzisen anatomischen Dehnungs-Zielen
+// Standard-Bibliothek gemappt auf das neue typsichere System
 const defaultLibrary: Exercise[] = [
   {
     id: 'ex-1',
     name: 'Couch Stretch',
     description: 'Bringe das hintere Knie an eine Wand/Couch. Richte das Becken aktiv auf, um den M. iliopsoas und M. rectus femoris isoliert zu treffen.',
-    bodyRegion: 'Hüftbeuger (M. iliopsoas)',
+    bodyRegion: 'Hüftbeuger & Quadrizeps (Anterior)',
     isUnilateral: true,
     rating: 5,
     duration: 30
@@ -66,7 +80,7 @@ const defaultLibrary: Exercise[] = [
     id: 'ex-2',
     name: 'Tauben-Stretch (Pigeon)',
     description: 'Vorderes Bein angewinkelt ablegen. Dehnt intensiv den M. piriformis und die tiefen Außenrotatoren der Hüfte.',
-    bodyRegion: 'Piriformis & Außenrotatoren',
+    bodyRegion: 'Hüftstrecker & Gesäß (Posterior)',
     isUnilateral: true,
     rating: 4,
     duration: 30
