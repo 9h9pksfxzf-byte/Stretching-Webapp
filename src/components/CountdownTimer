@@ -59,8 +59,8 @@ export const CountdownTimer: React.FC<CountdownTimerProps> = ({
       timerId = setTimeout(() => {
         const nextTime = timeLeft - 1;
         
-        // Signal-Logik für die letzten 3 Sekunden
-        if (nextTime === 2 || nextTime === 1) {
+        // Signal-Logik für die letzten 3 Sekunden (Geändert auf nextTime === 3, 2, 1 für echten 3-Sekunden-Countdown)
+        if (nextTime === 3 || nextTime === 2 || nextTime === 1) {
           // Hoher, kurzer Piepton für den Countdown (880 Hz / A5)
           playTone(880, 0.1, 'sine');
         } else if (nextTime === 0) {
@@ -78,7 +78,15 @@ export const CountdownTimer: React.FC<CountdownTimerProps> = ({
   }, [timeLeft, isActive]);
 
   const handleStartStop = () => {
-    initAudio(); // Wichtig für iOS/iPadOS Sicherheitsbarrieren
+    initAudio(); 
+    
+    // CRITICAL FIX FÜR iOS:
+    // Wenn der Timer gestartet wird, spielen wir sofort einen unhörbaren Ton ab (Dauer 0.001s).
+    // Das entsperrt die Oszillator-Pipeline in iOS Safari dauerhaft für asynchrone Timeouts.
+    if (!isActive) {
+      playTone(440, 0.001, 'sine');
+    }
+
     setIsActive(!isActive);
   };
 
@@ -144,7 +152,7 @@ const styles = {
     transition: 'color 0.2s ease',
   },
   criticalText: {
-    color: '#ff1744', // Signalrot für die letzten 3 Sekunden
+    color: '#ff1744', 
     transform: 'scale(1.05)',
   },
   alertNotice: {
