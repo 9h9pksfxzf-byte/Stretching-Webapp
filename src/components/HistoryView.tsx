@@ -59,6 +59,23 @@ export const HistoryView = () => {
   const dailyMinutes = days.map((_, idx) => getDayVolume(idx));
   const maxDayMinutes = Math.max(...dailyMinutes, 1);
 
+  // HELFER: Berechnet die Minuten pro Körperregion für das geöffnete Modal
+  const getRegionsDataForSession = (session: HistoryEntry) => {
+    const regionMap: Record<string, number> = {};
+    
+    (session.completedExercises || []).forEach((ex) => {
+      // Wenn im Verlaufseintrag kein bodyRegion gespeichert ist, fällen wir auf 'Allgemein' zurück
+      const region = ex.bodyRegion || 'Allgemein';
+      regionMap[region] = (regionMap[region] || 0) + (ex.duration || 0);
+    });
+
+    return Object.entries(regionMap).map(([name, seconds]) => ({
+      name,
+      minutes: Math.round((seconds / 60) * 10) / 10, // Auf eine Nachkommastelle gerundet
+      rawSeconds: seconds
+    }));
+  };
+
   return (
     <div className="flex flex-col text-slate-100 bg-gradient-to-b from-[#0d0f12] via-[#08090a] to-[#030405] h-[100dvh] fixed inset-0 box-border overflow-hidden p-5 select-none">
       
@@ -180,10 +197,10 @@ export const HistoryView = () => {
         )}
       </div>
 
-      {/* DETAIL MODAL - Überarbeitet für ein nahtloses Premium-Erlebnis */}
+      {/* DETAIL MODAL - Inklusive intelligenter Auswertung der Körperregionen */}
       {selectedSession && (
         <div className="fixed inset-0 bg-black/40 backdrop-blur-md z-50 flex items-end sm:items-center justify-center p-4 transition-all duration-300">
-          <div className="bg-[#0f1318]/90 border border-white/[0.08] w-full max-w-md rounded-2xl max-h-[75vh] flex flex-col text-left shadow-2xl shadow-black/80 animate-slideUp">
+          <div className="bg-[#0f1318]/95 border border-white/[0.08] w-full max-w-md rounded-2xl max-h-[80vh] flex flex-col text-left shadow-2xl shadow-black/80 animate-slideUp">
             
             {/* Modal Header */}
             <div className="p-4 border-b border-white/[0.06] flex justify-between items-center shrink-0">
@@ -201,51 +218,92 @@ export const HistoryView = () => {
               </button>
             </div>
 
-            {/* Modal Content - Perfekt formatiert im transparenten Look */}
-            <div className="p-4 overflow-y-auto space-y-3 flex-grow">
-              <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest block mb-1">Absolvierte Übungen</span>
+            {/* Modal Scrollbereich */}
+            <div className="p-4 overflow-y-auto space-y-4 flex-grow scrollbar-none">
               
-              {selectedSession.completedExercises?.map((ex, idx) => (
-                <div key={idx} className="bg-white/[0.02] border border-white/[0.04] p-3.5 rounded-xl flex flex-col gap-2">
-                  <div className="flex justify-between items-center">
-                    <div className="min-w-0 flex-1">
-                      <h4 className="text-xs font-bold text-slate-200 truncate">{ex.name}</h4>
-                      {ex.side && ex.side !== 'Beide' && (
-                        <span className={`text-[9px] font-extrabold px-2 py-0.5 rounded-md mt-1 inline-block tracking-wider uppercase ${
-                          ex.side === 'Links' 
-                            ? 'bg-teal-500/10 text-teal-300 border border-teal-500/20' 
-                            : 'bg-indigo-500/10 text-indigo-300 border border-indigo-500/20'
-                        }`}>
-                          {ex.side}
+              {/* NEU: Sektion für zeitliche Aufteilung nach Körperregionen */}
+              <div>
+                <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest block mb-2">Fokus nach Körperregionen</span>
+                <div className="bg-white/[0.02] border border-white/[0.04] p-3 rounded-xl space-y-2.5">
+                  {getRegionsDataForSession(selectedSession).map((region, idx) => (
+                    <div key={idx} className="flex flex-col gap-1.5">
+                      <div className="flex justify-between items-center text-[11px]">
+                        <span className="font-bold text-slate-300">📍 {region.name}</span>
+                        <span className="font-mono text-slate-400 font-medium">
+                          {region.minutes > 0 ? `${region.minutes} Min` : `${region.rawSeconds} Sek`}
                         </span>
-                      )}
+                      </div>
+                      {/* Subtiler Indikator-Balken */}
+                      <div className="w-full bg-slate-950 h-1 rounded-full overflow-hidden">
+                        <div 
+                          className="h-full bg-gradient-to-r from-sky-500 to-sky-400 rounded-full"
+                          style={{ 
+                            width: `${Math.min(
+                              (region.rawSeconds / (selectedSession.completedExercises || []).reduce((sum, e) => sum + (e.duration || 0), 0)) * 100, 
+                              100
+                            )}%` 
+                          }}
+                        />
+                      </div>
                     </div>
-                    <div className="text-right shrink-0 ml-3">
-                      <span className="text-xs font-mono font-bold bg-white/[0.04] px-2 py-1 rounded-lg border border-white/[0.04] text-slate-300">
-                        {ex.duration ? `${ex.duration}s` : '---'}
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Intensitäts- / Schmerz-Indikator */}
-                  <div className="flex items-center gap-2.5 pt-2 border-t border-white/[0.04] mt-0.5">
-                    <span className="text-[9px] text-slate-400 font-semibold uppercase tracking-wider">Intensität:</span>
-                    <div className="flex-grow bg-slate-950 h-1.5 rounded-full overflow-hidden relative border border-white/[0.01]">
-                      <div 
-                        style={{ width: `${(ex.executionRating / 10) * 100}%` }}
-                        className={`h-full rounded-full transition-all duration-500 ${
-                          ex.executionRating <= 3 
-                            ? 'bg-gradient-to-r from-emerald-500 to-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.3)]' 
-                            : ex.executionRating <= 7 
-                            ? 'bg-gradient-to-r from-amber-500 to-amber-400 shadow-[0_0_6px_rgba(251,191,36,0.3)]' 
-                            : 'bg-gradient-to-r from-red-500 to-rose-400 shadow-[0_0_6px_rgba(244,63,94,0.3)]'
-                        }`}
-                      />
-                    </div>
-                    <span className="text-[10px] font-mono font-black text-slate-400 w-6 text-right">{ex.executionRating}/10</span>
-                  </div>
+                  ))}
                 </div>
-              ))}
+              </div>
+
+              {/* Sektion für die Übungsliste */}
+              <div className="space-y-2.5">
+                <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest block mb-1">Absolvierte Übungen</span>
+                
+                {selectedSession.completedExercises?.map((ex, idx) => (
+                  <div key={idx} className="bg-white/[0.02] border border-white/[0.04] p-3.5 rounded-xl flex flex-col gap-2">
+                    <div className="flex justify-between items-center">
+                      <div className="min-w-0 flex-1">
+                        <h4 className="text-xs font-bold text-slate-200 truncate">{ex.name}</h4>
+                        <div className="flex gap-1.5 flex-wrap items-center mt-1">
+                          {ex.bodyRegion && (
+                            <span className="text-[9px] font-medium px-1.5 py-0.5 rounded bg-slate-800 text-slate-400 border border-white/[0.02]">
+                              {ex.bodyRegion}
+                            </span>
+                          )}
+                          {ex.side && ex.side !== 'Beide' && (
+                            <span className={`text-[9px] font-extrabold px-1.5 py-0.5 rounded tracking-wider uppercase ${
+                              ex.side === 'Links' 
+                                ? 'bg-teal-500/10 text-teal-300 border border-teal-500/20' 
+                                : 'bg-indigo-500/10 text-indigo-300 border border-indigo-500/20'
+                            }`}>
+                              {ex.side}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      <div className="text-right shrink-0 ml-3">
+                        <span className="text-xs font-mono font-bold bg-white/[0.04] px-2 py-1 rounded-lg border border-white/[0.04] text-slate-300">
+                          {ex.duration ? `${ex.duration}s` : '---'}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Intensitäts- / Schmerz-Indikator */}
+                    <div className="flex items-center gap-2.5 pt-2 border-t border-white/[0.04] mt-0.5">
+                      <span className="text-[9px] text-slate-400 font-semibold uppercase tracking-wider">Intensität:</span>
+                      <div className="flex-grow bg-slate-950 h-1.5 rounded-full overflow-hidden relative border border-white/[0.01]">
+                        <div 
+                          style={{ width: `${(ex.executionRating / 10) * 100}%` }}
+                          className={`h-full rounded-full transition-all duration-500 ${
+                            ex.executionRating <= 3 
+                              ? 'bg-gradient-to-r from-emerald-500 to-emerald-400' 
+                              : ex.executionRating <= 7 
+                              ? 'bg-gradient-to-r from-amber-500 to-amber-400' 
+                              : 'bg-gradient-to-r from-red-500 to-rose-400'
+                          }`}
+                        />
+                      </div>
+                      <span className="text-[10px] font-mono font-black text-slate-400 w-6 text-right">{ex.executionRating}/10</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
             </div>
 
           </div>
