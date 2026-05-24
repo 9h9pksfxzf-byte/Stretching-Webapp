@@ -21,8 +21,12 @@ export const HistoryView = () => {
   };
 
   const startOfWeek = getMsOfStartOfWeek();
-  const weeklyEntries = (history || []).filter((entry) => {
-    const entryTimestamp = isNaN(Number(entry.id)) ? Date.now() : Number(entry.id);
+  
+  // Sicheres Mapping und Filtern der Einträge
+  const safeHistory = history || [];
+  
+  const weeklyEntries = safeHistory.filter((entry) => {
+    const entryTimestamp = !entry.id || isNaN(Number(entry.id)) ? Date.now() : Number(entry.id);
     return entryTimestamp >= startOfWeek;
   });
 
@@ -44,7 +48,7 @@ export const HistoryView = () => {
 
   const getDayVolume = (dayIndex: number) => {
     const targetDayEntries = weeklyEntries.filter((entry) => {
-      const entryTimestamp = isNaN(Number(entry.id)) ? Date.now() : Number(entry.id);
+      const entryTimestamp = !entry.id || isNaN(Number(entry.id)) ? Date.now() : Number(entry.id);
       const d = new Date(entryTimestamp);
       const day = d.getDay();
       const adjustedDay = day === 0 ? 6 : day - 1;
@@ -59,19 +63,17 @@ export const HistoryView = () => {
   const dailyMinutes = days.map((_, idx) => getDayVolume(idx));
   const maxDayMinutes = Math.max(...dailyMinutes, 1);
 
-  // HELFER: Berechnet die Minuten pro Körperregion für das geöffnete Modal
   const getRegionsDataForSession = (session: HistoryEntry) => {
     const regionMap: Record<string, number> = {};
     
     (session.completedExercises || []).forEach((ex) => {
-      // Wenn im Verlaufseintrag kein bodyRegion gespeichert ist, fällen wir auf 'Allgemein' zurück
       const region = ex.bodyRegion || 'Allgemein';
       regionMap[region] = (regionMap[region] || 0) + (ex.duration || 0);
     });
 
     return Object.entries(regionMap).map(([name, seconds]) => ({
       name,
-      minutes: Math.round((seconds / 60) * 10) / 10, // Auf eine Nachkommastelle gerundet
+      minutes: Math.round((seconds / 60) * 10) / 10,
       rawSeconds: seconds
     }));
   };
@@ -164,17 +166,17 @@ export const HistoryView = () => {
           Letzte Aktivitäten
         </span>
         
-        {!history || history.length === 0 ? (
+        {safeHistory.length === 0 ? (
           <div className="text-center text-xs text-slate-600 italic pt-8">Noch keine Daten aufgezeichnet.</div>
         ) : (
-          history.slice().reverse().map((entry) => {
+          safeHistory.slice().reverse().map((entry) => {
             const sessionMins = Math.round(((entry.completedExercises || []).reduce((sum, ex) => sum + (ex.duration || 0), 0)) / 60);
-            const entryTimestamp = isNaN(Number(entry.id)) ? Date.now() : Number(entry.id);
+            const entryTimestamp = !entry.id || isNaN(Number(entry.id)) ? Date.now() : Number(entry.id);
             const formattedDate = new Date(entryTimestamp).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' });
 
             return (
               <button 
-                key={entry.id} 
+                key={entry.id || Math.random().toString()} 
                 onClick={() => setSelectedSession(entry)}
                 className="w-full text-left bg-white/[0.02] hover:bg-white/[0.04] border border-white/[0.05] p-3.5 rounded-2xl flex justify-between items-center active:scale-[0.99] transition-all shadow-sm"
               >
@@ -197,17 +199,16 @@ export const HistoryView = () => {
         )}
       </div>
 
-      {/* DETAIL MODAL - Inklusive intelligenter Auswertung der Körperregionen */}
+      {/* DETAIL MODAL */}
       {selectedSession && (
         <div className="fixed inset-0 bg-black/40 backdrop-blur-md z-50 flex items-end sm:items-center justify-center p-4 transition-all duration-300">
           <div className="bg-[#0f1318]/95 border border-white/[0.08] w-full max-w-md rounded-2xl max-h-[80vh] flex flex-col text-left shadow-2xl shadow-black/80 animate-slideUp">
             
-            {/* Modal Header */}
             <div className="p-4 border-b border-white/[0.06] flex justify-between items-center shrink-0">
               <div>
                 <h3 className="text-sm font-black text-white tracking-tight">{selectedSession.programName}</h3>
                 <p className="text-[10px] font-mono text-slate-400 mt-0.5">
-                  {new Date(isNaN(Number(selectedSession.id)) ? Date.now() : Number(selectedSession.id)).toLocaleString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })} Uhr
+                  {new Date(!selectedSession.id || isNaN(Number(selectedSession.id)) ? Date.now() : Number(selectedSession.id)).toLocaleString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })} Uhr
                 </p>
               </div>
               <button 
@@ -218,10 +219,7 @@ export const HistoryView = () => {
               </button>
             </div>
 
-            {/* Modal Scrollbereich */}
             <div className="p-4 overflow-y-auto space-y-4 flex-grow scrollbar-none">
-              
-              {/* NEU: Sektion für zeitliche Aufteilung nach Körperregionen */}
               <div>
                 <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest block mb-2">Fokus nach Körperregionen</span>
                 <div className="bg-white/[0.02] border border-white/[0.04] p-3 rounded-xl space-y-2.5">
@@ -233,7 +231,6 @@ export const HistoryView = () => {
                           {region.minutes > 0 ? `${region.minutes} Min` : `${region.rawSeconds} Sek`}
                         </span>
                       </div>
-                      {/* Subtiler Indikator-Balken */}
                       <div className="w-full bg-slate-950 h-1 rounded-full overflow-hidden">
                         <div 
                           className="h-full bg-gradient-to-r from-sky-500 to-sky-400 rounded-full"
@@ -250,7 +247,6 @@ export const HistoryView = () => {
                 </div>
               </div>
 
-              {/* Sektion für die Übungsliste */}
               <div className="space-y-2.5">
                 <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest block mb-1">Absolvierte Übungen</span>
                 
@@ -283,7 +279,6 @@ export const HistoryView = () => {
                       </div>
                     </div>
 
-                    {/* Intensitäts- / Schmerz-Indikator */}
                     <div className="flex items-center gap-2.5 pt-2 border-t border-white/[0.04] mt-0.5">
                       <span className="text-[9px] text-slate-400 font-semibold uppercase tracking-wider">Intensität:</span>
                       <div className="flex-grow bg-slate-950 h-1.5 rounded-full overflow-hidden relative border border-white/[0.01]">
