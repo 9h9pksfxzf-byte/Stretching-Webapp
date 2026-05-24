@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { useStore, PerformedExercise } from '../store/useStore';
 
 interface RoutineRunnerProps {
@@ -15,7 +15,8 @@ export const RoutineRunner = ({ programId, onClose }: RoutineRunnerProps) => {
   const [phase, setPhase] = useState<RunnerPhase>('EXERCISE');
   
   const [timeLeft, setTimeLeft] = useState<number>(0);
-  const [isActive, setIsActive] = useState<boolean>(false);
+  // Wir steuern die Aktivität getrennt, um Seiteneffekte zu vermeiden
+  const [isTimerRunning, setIsTimerRunning] = useState<boolean>(false);
   
   const [completedExercises, setCompletedExercises] = useState<PerformedExercise[]>([]);
 
@@ -24,54 +25,48 @@ export const RoutineRunner = ({ programId, onClose }: RoutineRunnerProps) => {
   const currentProgramData = programExercises[index];
   const currentExerciseData = library.find(e => e.id === currentProgramData?.exerciseId);
 
-  // 1. Phasen- und Zeit-Initialisierung
+  // 1. Synchronisierung von Phase, Zeit und Autostart-Verhalten
   useEffect(() => {
     if (!currentProgramData) {
       setPhase('FINISHED');
+      setIsTimerRunning(false);
       return;
     }
 
     if (phase === 'EXERCISE') {
       setTimeLeft(currentProgramData.duration || 30);
-      // Aktive Übung wartet bewusst auf den manuellen Start
+      setIsTimerRunning(false); // Übung startet pausiert
     } else if (phase === 'BREAK') {
-      // Nutzt die programmierte Pause oder standardmäßig 10 Sekunden
       setTimeLeft(currentProgramData.breakDuration ?? 10);
+      setIsTimerRunning(true); // Pause startet GARANTIERT sofort automatisch
     }
   }, [index, phase, currentProgramData]);
 
-  // 2. Der interne Timer-Loop
+  // 2. Der Core-Timer-Loop
   useEffect(() => {
     let interval: any = null;
 
-    if (isActive && timeLeft > 0) {
+    if (isTimerRunning && timeLeft > 0) {
       interval = setInterval(() => {
         setTimeLeft((time) => time - 1);
       }, 1000);
-    } else if (timeLeft === 0 && isActive) {
-      setIsActive(false);
-      handlePhaseTimeout();
+    } else if (timeLeft === 0 && isTimerRunning) {
+      setIsTimerRunning(false);
+      if (phase === 'EXERCISE') {
+        setPhase('RATING');
+      } else if (phase === 'BREAK') {
+        setPhase('EXERCISE');
+        setIndex((i) => i + 1);
+      }
     }
 
     return () => {
       if (interval) clearInterval(interval);
     };
-  }, [isActive, timeLeft]);
+  }, [isTimerRunning, timeLeft, phase]);
 
-  // 3. Automatischer Ablauf nach Zeit-Ende
-  const handlePhaseTimeout = () => {
-    if (phase === 'EXERCISE') {
-      setPhase('RATING');
-    } else if (phase === 'BREAK') {
-      // Pause von alleine abgelaufen -> Nächste Übung vorbereiten (pausiert)
-      setPhase('EXERCISE');
-      setIndex((i) => i + 1);
-    }
-  };
-
-  // Manueller Skip-Button
   const handleSkip = () => {
-    setIsActive(false);
+    setIsTimerRunning(false);
     if (phase === 'EXERCISE') {
       setPhase('RATING');
     } else if (phase === 'BREAK') {
@@ -80,11 +75,11 @@ export const RoutineRunner = ({ programId, onClose }: RoutineRunnerProps) => {
     }
   };
 
-  const toggleTimer = useCallback(() => {
-    setIsActive((prev) => !prev);
-  }, []);
+  const toggleTimer = () => {
+    setIsTimerRunning((prev) => !prev);
+  };
 
-  // 4. Bewertung abgeben -> Hier startet die Pause jetzt SOFORT automatisch
+  // 3. Bewertung verarbeiten und direkt in den Autostart der Pause überleiten
   const handleRatingSelection = (ratingValue: number) => {
     if (!currentProgramData || !currentExerciseData) return;
 
@@ -115,25 +110,25 @@ export const RoutineRunner = ({ programId, onClose }: RoutineRunnerProps) => {
       }
       setPhase('FINISHED');
     } else {
-      // DER ENTSCHEIDENDE FIX: Phase wechseln UND den Timer direkt aktivieren!
+      // Setzt die Phase auf Break. Der obere useEffect fängt dies ab
+      // und setzt timeLeft auf die Pausenzeit sowie isTimerRunning auf true.
       setPhase('BREAK');
-      setIsActive(true); 
     }
   };
 
-  // INTERFACE: ENTHUSIASTISCHER ABSCHLUSS
+  // SCREEN: FINISHED
   if (phase === 'FINISHED' || !currentProgramData || !currentExerciseData || !program) {
     return (
-      <div className="flex flex-col items-center justify-center p-6 h-screen bg-[#0a0a0a] text-white gap-8">
+      <div className="flex flex-col items-center justify-center p-6 h-screen bg-[#0a0a0a] text-white gap-6">
         <div className="text-center">
-          <h2 className="text-4xl font-bold mb-4">Geschafft! 🏁</h2>
-          <p className="text-slate-400">
-            Du hast das Programm <strong className="text-white">{program?.name || 'Unbekannt'}</strong> erfolgreich beendet und im Verlauf gespeichert.
+          <h2 className="text-3xl font-bold mb-2">Geschafft! 🏁</h2>
+          <p className="text-slate-400 text-sm">
+            Du hast <strong className="text-white">{program?.name || 'Unbekannt'}</strong> erfolgreich beendet.
           </p>
         </div>
         <button 
           onClick={onClose} 
-          className="bg-emerald-600 w-full py-4 rounded-xl font-bold text-lg active:bg-emerald-700"
+          className="bg-emerald-600 w-full max-w-xs py-4 rounded-xl font-bold text-lg active:bg-emerald-700"
         >
           Fertig
         </button>
@@ -141,90 +136,102 @@ export const RoutineRunner = ({ programId, onClose }: RoutineRunnerProps) => {
     );
   }
 
-  // INTERFACE: INTERAKTIVES RATING
+  // SCREEN: RATING
   if (phase === 'RATING') {
     return (
-      <div className="fixed inset-0 bg-[#0a0a0a] text-white p-6 flex flex-col items-center justify-center gap-6 z-50">
-        <div className="text-center mb-2">
-          <p className="text-emerald-500 uppercase tracking-widest text-xs mb-2 font-bold">Reflexion</p>
-          <h2 className="text-2xl font-bold mb-1">Wie war deine Performance?</h2>
-          <p className="text-slate-400 text-sm">
+      <div className="fixed inset-0 bg-[#0a0a0a] text-white p-4 flex flex-col items-center justify-between z-50 h-screen box-border">
+        <div className="text-center mt-4">
+          <p className="text-emerald-500 uppercase tracking-widest text-xs font-bold mb-1">Reflexion</p>
+          <h2 className="text-xl font-bold">Wie war deine Performance?</h2>
+          <p className="text-slate-400 text-xs mt-1 truncate max-w-xs">
             {currentExerciseData.name} {currentProgramData.side ? `(${currentProgramData.side})` : ''}
           </p>
         </div>
 
-        <div className="grid grid-cols-2 gap-3 w-full max-w-sm">
+        <div className="grid grid-cols-2 gap-2.5 w-full max-w-xs my-auto">
           {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((num) => (
             <button
               key={num}
               onClick={() => handleRatingSelection(num)}
-              className="py-4 bg-[#1a1a1a] border border-[#333] rounded-xl font-bold text-lg active:bg-emerald-600 text-white transition-colors"
+              className="py-3 bg-[#1a1a1a] border border-[#333] rounded-xl font-bold text-base active:bg-emerald-600 text-white transition-colors"
             >
               {num}
             </button>
           ))}
         </div>
 
-        <div className="text-xs text-slate-500 text-center max-w-xs mt-2 leading-relaxed">
-          1 = Sehr unsauber / Abbruch <br /> 10 = Perfekte Form / Volle Dehnung gehalten
+        <div className="text-[11px] text-slate-500 text-center mb-4 leading-tight">
+          1 = Sehr unsauber / Abbruch | 10 = Perfekt gehalten
         </div>
       </div>
     );
   }
 
-  // INTERFACE: LIVE-WORKOUT & AUTOMATISCHE PAUSE
+  // SCREEN: MAIN RUNNER (EXERCISE & BREAK auf einen Blick optimiert)
   return (
-    <div className="flex flex-col items-center p-6 gap-6 text-white pt-16 min-h-screen bg-[#0a0a0a]">
-      <div className="text-center w-full px-2">
-        <p className="text-slate-400 uppercase tracking-widest text-xs mb-1">
+    <div className="flex flex-col items-center justify-between p-4 text-white bg-[#0a0a0a] h-screen fixed inset-0 box-border overflow-hidden select-none">
+      
+      {/* Header Bereich */}
+      <div className="text-center w-full pt-4 px-2 flex-shrink-0">
+        <p className="text-slate-400 uppercase tracking-widest text-[11px] font-semibold">
           {phase === 'BREAK' ? "Pause" : `Übung ${index + 1} von ${programExercises.length}`}
         </p>
-        <h1 className="text-3xl font-bold truncate">
+        <h1 className="text-2xl font-bold truncate mt-0.5">
           {phase === 'BREAK' ? `Nächste: ${getNextExerciseName(programExercises, library, index)}` : currentExerciseData.name}
         </h1>
         {phase === 'EXERCISE' && currentProgramData.side && (
-          <h2 className="text-xl font-bold text-emerald-500 mt-1">
+          <span className="inline-block bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-xs font-bold px-2.5 py-0.5 rounded-full mt-1.5">
             Seite: {currentProgramData.side}
-          </h2>
+          </span>
         )}
       </div>
 
-      <div className="text-[120px] font-mono font-bold leading-none my-6 select-none">
-        {timeLeft}
+      {/* Riesen-Timer Bereich */}
+      <div className="flex items-center justify-center my-auto flex-grow">
+        <span className="text-[110px] font-mono font-bold leading-none tracking-tighter">
+          {timeLeft}
+        </span>
       </div>
 
-      {phase === 'EXERCISE' && currentExerciseData.description && (
-        <div className="bg-[#1a1a1a] border border-[#333] p-4 rounded-xl text-sm text-slate-300 max-w-md w-full text-center overflow-y-auto max-h-32 shadow-inner">
-          {currentExerciseData.description}
-        </div>
-      )}
+      {/* Content Box (Beschreibung oder Pausen-Anzeige) */}
+      <div className="w-full max-w-sm px-2 flex-shrink-0 h-24 mb-4 flex items-center justify-center">
+        {phase === 'EXERCISE' ? (
+          currentExerciseData.description ? (
+            <div className="bg-[#1a1a1a] border border-[#333] p-3 rounded-xl text-xs text-slate-400 text-center overflow-y-auto h-full w-full max-h-24">
+              {currentExerciseData.description}
+            </div>
+          ) : (
+            <div className="text-slate-600 text-xs italic">Keine Beschreibung verfügbar.</div>
+          )
+        ) : (
+          <div className="bg-emerald-950/20 border border-emerald-900/30 p-3 rounded-xl text-xs text-emerald-400 font-medium italic text-center w-full h-full flex items-center justify-center animate-pulse">
+            Pause läuft automatisch... Atme tief durch.
+          </div>
+        )}
+      </div>
 
-      {phase === 'BREAK' && (
-        <div className="text-sm text-emerald-500 font-medium italic h-16 flex items-center text-center px-4 animate-pulse">
-          Pause läuft... Atme tief in den Bauch ein.
-        </div>
-      )}
-
-      <div className="grid grid-cols-3 gap-4 w-full mt-auto mb-6">
+      {/* Feste, kompakte Steuerungselemente unten */}
+      <div className="grid grid-cols-3 gap-3 w-full max-w-sm pb-4 flex-shrink-0">
         <button 
           onClick={toggleTimer} 
-          className={`${isActive ? 'bg-amber-600/20 text-amber-400 border border-amber-500/30' : 'bg-emerald-600 text-white'} py-6 rounded-2xl font-bold text-base active:opacity-80 transition-all`}
+          className={`${isTimerRunning ? 'bg-amber-600/10 text-amber-400 border border-amber-500/20' : 'bg-emerald-600 text-white'} py-4 rounded-xl font-bold text-sm active:opacity-80 transition-all`}
         >
-          {isActive ? 'Pause' : 'Start'}
+          {isTimerRunning ? 'Pause' : 'Start'}
         </button>
         <button 
           onClick={handleSkip} 
-          className="bg-slate-800 border border-slate-700 py-6 rounded-2xl font-bold text-base text-slate-200 active:bg-slate-700"
+          className="bg-[#1a1a1a] border border-[#333] py-4 rounded-xl font-bold text-sm text-slate-200 active:bg-slate-800"
         >
           Skip
         </button>
         <button 
           onClick={() => window.location.reload()} 
-          className="bg-red-950/30 border border-red-900/50 py-6 rounded-2xl font-bold text-base text-red-400 active:bg-red-900/40"
+          className="bg-red-950/20 border border-red-900/30 py-4 rounded-xl font-bold text-sm text-red-400 active:bg-red-900/40"
         >
           Reset
         </button>
       </div>
+
     </div>
   );
 };
