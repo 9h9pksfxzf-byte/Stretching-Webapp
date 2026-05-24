@@ -5,10 +5,25 @@ import { BottomNav } from './components/BottomNav';
 import { ProgramBuilder } from './components/ProgramBuilder';
 import { ExerciseBuilder } from './components/ExerciseBuilder';
 import { HistoryView } from './components/HistoryView';
-import { useStore, Exercise } from './store/useStore';
+import { useStore, Exercise, BodyRegion } from './store/useStore';
 
 type TabState = 'home' | 'library' | 'history' | 'settings';
 type OverlayState = 'none' | 'active' | 'build-program' | 'build-exercise';
+
+// Konstante für die exakte, sportwissenschaftliche Hierarchie von Kopf bis Fuß
+export const AVAILABLE_REGIONS: { value: BodyRegion; label: string; icon: string }[] = [
+  { value: 'Hals & Nacken', label: 'Hals & Nacken', icon: '👤' },
+  { value: 'BWS & Thorax (Rotation/Extension)', label: 'BWS & Thorax', icon: '🫁' },
+  { value: 'LWS & Core (Rumpfstabilität)', label: 'Unterer Rücken & Core', icon: '🧱' },
+  { value: 'Brust & Schultervorderseite', label: 'Brust & Schulter (Vorne)', icon: '🛡️' },
+  { value: 'Oberer Rücken & Schulterrückseite', label: 'Rücken & Schulter (Hinten)', icon: '🪽' },
+  { value: 'Arme & Handgelenke', label: 'Arme & Handgelenke', icon: '💪' },
+  { value: 'Hüftbeuger & Quadrizeps (Anterior)', label: 'Hüftbeuger & Quad (Vorne)', icon: '⚡' },
+  { value: 'Ischiocrurale Muskulatur (Hamstrings)', label: 'Hamstrings (Rückseite)', icon: '🦵' },
+  { value: 'Hüftstrecker & Gesäß (Posterior)', label: 'Gesäß & tiefe Hüfte', icon: '🍑' },
+  { value: 'Adduktoren (Medial)', label: 'Adduktoren (Innenseite)', icon: '↔️' },
+  { value: 'Unterschenkel & Fuß (Fundament)', label: 'Wade, Schienbein & Fuß', icon: '🦶' }
+];
 
 export default function App() {
   const [currentTab, setCurrentTab] = useState<TabState>('home');
@@ -48,7 +63,7 @@ export default function App() {
   };
 
   const groupedLibrary = library.reduce((acc, ex) => {
-    const region = ex.bodyRegion || 'Sonstige';
+    const region = ex.bodyRegion || 'LWS & Core (Rumpfstabilität)';
     if (!acc[region]) acc[region] = [];
     acc[region].push(ex);
     return acc;
@@ -98,7 +113,6 @@ export default function App() {
               </button>
             </header>
             
-            {/* Hier wurden die Props und Typspezifikationen exakt angeglichen */}
             <ProgramGrid 
               onStartProgram={(id: string) => { setActiveProgramId(id); setOverlay('active'); }} 
               onEditProgram={(id: string) => { setEditingId(id); setOverlay('build-program'); }} 
@@ -124,33 +138,40 @@ export default function App() {
             </header>
             
             <div className="flex flex-col gap-6">
-              {Object.keys(groupedLibrary).length === 0 ? (
+              {library.length === 0 ? (
                 <div className="text-center text-xs text-slate-600 italic pt-12">Noch keine Übungen angelegt.</div>
               ) : (
-                Object.entries(groupedLibrary).map(([region, exercises]) => (
-                  <div key={region} className="space-y-3">
-                    <h2 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest pl-1 border-l-2 border-sky-500/50">{region}</h2>
-                    <div className="flex flex-col gap-3">
-                      {exercises.map(ex => (
-                        <div key={ex.id} className="bg-white/[0.02] border border-white/[0.05] p-4 rounded-2xl flex justify-between items-center gap-4 shadow-sm">
-                          <div className="flex-1 min-w-0">
-                            <p className="font-bold text-slate-200 truncate text-sm">{ex.name}</p>
-                            <p className="text-[10px] text-sky-400 font-semibold tracking-wide mt-1">
-                              {ex.isUnilateral ? '🔄 Einseitig' : '🤝 Beidseitig'} {ex.rating ? `| ★ ${ex.rating}/5` : ''}
-                            </p>
-                            {ex.description && (
-                              <p className="text-xs text-slate-400 mt-2 line-clamp-2 leading-relaxed bg-white/[0.01] p-2 rounded-xl border border-white/[0.02]">{ex.description}</p>
-                            )}
+                AVAILABLE_REGIONS.map((regionConfig) => {
+                  const exercises = groupedLibrary[regionConfig.value] || [];
+                  if (exercises.length === 0) return null; // Bereiche ohne Übungen ausblenden
+
+                  return (
+                    <div key={regionConfig.value} className="space-y-3">
+                      <h2 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest pl-1 border-l-2 border-sky-500/50 flex items-center gap-1.5">
+                        <span>{regionConfig.icon}</span> {regionConfig.label}
+                      </h2>
+                      <div className="flex flex-col gap-3">
+                        {exercises.map(ex => (
+                          <div key={ex.id} className="bg-white/[0.02] border border-white/[0.05] p-4 rounded-2xl flex justify-between items-center gap-4 shadow-sm">
+                            <div className="flex-1 min-w-0">
+                              <p className="font-bold text-slate-200 truncate text-sm">{ex.name}</p>
+                              <p className="text-[10px] text-sky-400 font-semibold tracking-wide mt-1">
+                                {ex.isUnilateral ? '🔄 Einseitig' : '🤝 Beidseitig'} {ex.rating ? `| ★ ${ex.rating}/5` : ''}
+                              </p>
+                              {ex.description && (
+                                <p className="text-xs text-slate-400 mt-2 line-clamp-2 leading-relaxed bg-white/[0.01] p-2 rounded-xl border border-white/[0.02]">{ex.description}</p>
+                              )}
+                            </div>
+                            <div className="flex flex-col gap-2 shrink-0">
+                              <button onClick={() => { setEditingId(ex.id); setOverlay('build-exercise'); }} className="text-[11px] font-bold bg-white/[0.04] text-slate-300 px-3 py-1.5 rounded-xl border border-white/[0.04] active:scale-95 transition-all">Edit</button>
+                              <button onClick={() => deleteExercise(ex.id)} className="text-[11px] font-bold text-red-400 bg-red-500/10 px-3 py-1.5 rounded-xl border border-red-500/10 active:scale-95 transition-all">Del</button>
+                            </div>
                           </div>
-                          <div className="flex flex-col gap-2 shrink-0">
-                            <button onClick={() => { setEditingId(ex.id); setOverlay('build-exercise'); }} className="text-[11px] font-bold bg-white/[0.04] text-slate-300 px-3 py-1.5 rounded-xl border border-white/[0.04] active:scale-95 transition-all">Edit</button>
-                            <button onClick={() => deleteExercise(ex.id)} className="text-[11px] font-bold text-red-400 bg-red-500/10 px-3 py-1.5 rounded-xl border border-red-500/10 active:scale-95 transition-all">Del</button>
-                          </div>
-                        </div>
-                      ))}
+                        ))}
+                      </div>
                     </div>
-                  </div>
-                ))
+                  );
+                })
               )}
             </div>
           </section>
