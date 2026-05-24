@@ -3,7 +3,6 @@ import { useStore, HistoryEntry } from '../store/useStore';
 
 export const HistoryView = () => {
   const { history, clearHistory } = useStore();
-  // Speichert die ID des aktuell ausgeklappten Eintrags (Accordion statt Modal)
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
   const handleReset = () => {
@@ -14,7 +13,6 @@ export const HistoryView = () => {
     }
   };
 
-  // Performance-Optimierung 1: Cache für konstanten Wochenstart-Zeitstempel
   const startOfWeek = useMemo(() => {
     const today = new Date();
     const day = today.getDay();
@@ -22,7 +20,6 @@ export const HistoryView = () => {
     return new Date(today.setDate(diff)).setHours(0, 0, 0, 0);
   }, []);
 
-  // Performance-Optimierung 2: Berechnungen isolieren via useMemo
   const stats = useMemo(() => {
     const safeHistory = history || [];
     const reversed = [...safeHistory].reverse();
@@ -49,13 +46,12 @@ export const HistoryView = () => {
         }, 0) / weeklyEntries.length).toFixed(1)
       : '0.0';
 
-    // Wochentags-Volumen deterministisch berechnen
     const dailyMinutes = Array(7).fill(0);
     weeklyEntries.forEach((entry) => {
       const entryTimestamp = !entry.id || isNaN(Number(entry.id)) ? Date.now() : Number(entry.id);
       const d = new Date(entryTimestamp);
       const day = d.getDay();
-      const adjustedDay = day === 0 ? 6 : day - 1; // Montag = 0
+      const adjustedDay = day === 0 ? 6 : day - 1;
       const durationMin = (entry.completedExercises || []).reduce((sum, ex) => sum + (ex.duration || 0), 0) / 60;
       dailyMinutes[adjustedDay] += durationMin;
     });
@@ -72,7 +68,6 @@ export const HistoryView = () => {
     };
   }, [history, startOfWeek]);
 
-  // Performance-Optimierung 3: Regionen-Aggregation isoliert pro ID ausführen
   const getRegionsDataForSession = (session: HistoryEntry) => {
     const regionMap: Record<string, number> = {};
     let totalSeconds = 0;
@@ -99,14 +94,13 @@ export const HistoryView = () => {
   return (
     <div className="flex flex-col text-slate-100 bg-gradient-to-b from-[#0d0f12] via-[#08090a] to-[#030405] h-[100dvh] fixed inset-0 box-border overflow-hidden p-5 select-none max-w-lg mx-auto">
       
-      {/* Header */}
       <div className="pt-4 pb-2 flex-shrink-0 flex justify-between items-center">
         <div>
           <h1 className="text-2xl font-extrabold tracking-tight bg-gradient-to-r from-white via-slate-200 to-slate-400 bg-clip-text text-transparent">
             Dein Fortschritt
           </h1>
           <p className="text-emerald-400/80 font-medium text-[11px] tracking-wider uppercase mt-0.5">
-            Wissenschaftliches Monitoring
+            Präzises Muskel-Monitoring
           </p>
         </div>
         <button 
@@ -117,7 +111,7 @@ export const HistoryView = () => {
         </button>
       </div>
 
-      {/* KPI Dashboard Grid */}
+      {/* KPI Grid */}
       <div className="grid grid-cols-3 gap-3 my-4 flex-shrink-0">
         <div className="bg-white/[0.02] border border-white/[0.05] p-3.5 rounded-2xl flex flex-col justify-between">
           <span className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">Umfang</span>
@@ -142,7 +136,7 @@ export const HistoryView = () => {
         </div>
       </div>
 
-      {/* Visueller Wochen-Trend */}
+      {/* Verteilung */}
       <div className="bg-white/[0.01] border border-white/[0.04] p-4 rounded-2xl flex flex-col flex-shrink-0 mb-4">
         <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-3">Verteilung (Minuten)</span>
         <div className="flex items-end justify-between h-16 px-1">
@@ -165,7 +159,7 @@ export const HistoryView = () => {
         </div>
       </div>
 
-      {/* Scrollbare Liste der letzten Sessions (Optimiertes Crawling via Accordion) */}
+      {/* Verlaufsliste */}
       <div className="flex-grow overflow-y-auto pr-0.5 space-y-2 mb-24 scrollbar-none will-change-scroll">
         <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider sticky top-0 bg-[#08090a] py-1 block z-10">
           Verlaufs-Historie
@@ -187,7 +181,6 @@ export const HistoryView = () => {
                   isExpanded ? 'border-white/[0.12] bg-white/[0.04]' : 'border-white/[0.04]'
                 }`}
               >
-                {/* Accordion Trigger-Zeile */}
                 <button 
                   onClick={() => toggleAccordion(entry.id)}
                   className="w-full text-left p-3.5 flex justify-between items-center transition-colors active:bg-white/[0.02]"
@@ -207,45 +200,42 @@ export const HistoryView = () => {
                   </div>
                 </button>
 
-                {/* Eingebetteter Detailbereich (Zustandsgesteuertes Lazy-Rendering) */}
                 {isExpanded && (
                   <div className="px-3.5 pb-4 pt-1 border-t border-white/[0.04] space-y-3 bg-black/[0.15] animate-fadeIn">
                     
-                    {/* Regionenverteilung innerhalb der gewählten Session */}
-                    <div>
-                      <div className="flex flex-wrap gap-1.5 mb-2">
+                    {/* Aggregierte Zielstrukturen */}
+                    <div className="space-y-1.5">
+                      <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider block">Spezifischer Muskel-Fokus</span>
+                      <div className="flex flex-col gap-1">
                         {getRegionsDataForSession(entry).map((region, idx) => (
-                          <div key={idx} className="bg-slate-900/80 border border-white/[0.03] rounded-lg px-2 py-1 flex items-center justify-between text-[10px] flex-1 min-w-[80px]">
-                            <span className="text-slate-400 truncate mr-1">📍 {region.name}</span>
-                            <span className="font-mono font-bold text-sky-400">{region.minutes || '0.5'}m</span>
+                          <div key={idx} className="bg-slate-900/80 border border-white/[0.02] rounded-xl px-3 py-2 flex flex-col gap-1">
+                            <div className="flex justify-between items-center text-[10px]">
+                              <span className="text-slate-300 font-medium truncate max-w-[80%]">{region.name}</span>
+                              <span className="font-mono font-bold text-sky-400">{region.minutes || '0.5'}m</span>
+                            </div>
+                            <div className="w-full bg-slate-950 h-0.5 rounded-full overflow-hidden">
+                              <div style={{ width: `${region.percentage}%` }} className="h-full bg-sky-500 rounded-full" />
+                            </div>
                           </div>
                         ))}
                       </div>
                     </div>
 
-                    {/* Einzelne Übungen des Eintrags */}
-                    <div className="space-y-1.5">
+                    {/* Übungs-Auflistung */}
+                    <div className="space-y-1.5 pt-1">
+                      <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider block">Durchgeführte Reize</span>
                       {entry.completedExercises?.map((ex, idx) => (
                         <div key={idx} className="bg-white/[0.01] border border-white/[0.03] p-2.5 rounded-xl flex flex-col gap-1.5">
                           <div className="flex justify-between items-center">
                             <div className="min-w-0 flex-1">
                               <h5 className="text-[11px] font-bold text-slate-300 truncate">{ex.name}</h5>
-                              <div className="flex gap-1 items-center mt-0.5">
-                                {ex.side && ex.side !== 'Beide' && (
-                                  <span className={`text-[8px] font-black px-1 rounded uppercase tracking-wider ${
-                                    ex.side === 'Links' ? 'bg-teal-500/10 text-teal-400' : 'bg-indigo-500/10 text-indigo-400'
-                                  }`}>
-                                    {ex.side}
-                                  </span>
-                                )}
-                              </div>
+                              <p className="text-[9px] text-slate-500 truncate mt-0.5">{ex.bodyRegion}</p>
                             </div>
-                            <span className="text-[10px] font-mono font-medium text-slate-500 shrink-0">
+                            <span className="text-[10px] font-mono font-medium text-slate-400 bg-white/[0.03] px-1.5 py-0.5 rounded border border-white/[0.02] shrink-0 ml-2">
                               {ex.duration}s
                             </span>
                           </div>
 
-                          {/* Intensitätsbalken */}
                           <div className="flex items-center gap-2">
                             <div className="flex-grow bg-slate-950 h-1 rounded-full overflow-hidden relative">
                               <div 
