@@ -36,7 +36,7 @@ export const RoutineRunner = ({ programId, onClose }: RoutineRunnerProps) => {
   }, [index, currentExerciseData]);
 
   useEffect(() => {
-    let intervalId: any = null;
+    let intervalId: NodeJS.Timeout | null = null;
 
     if (isTimerRunning && timeLeft > 0) {
       intervalId = setInterval(() => {
@@ -113,6 +113,7 @@ export const RoutineRunner = ({ programId, onClose }: RoutineRunnerProps) => {
     if (isLastExercise && isUnilateralFinished) {
       if (program) {
         addHistoryEntry({
+          id: Date.now().toString(), // Verhindert den TS2345 Build-Fehler im Vercel-Deployment
           programName: program.name,
           completedExercises: updatedExercises
         });
