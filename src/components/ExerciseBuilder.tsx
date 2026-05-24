@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { useStore } from '../store/useStore';
+import { useStore, BodyRegion } from '../store/useStore';
+import { AVAILABLE_REGIONS } from '../App';
 
 interface ExerciseBuilderProps {
   exerciseId: string | null;
@@ -11,7 +12,8 @@ export const ExerciseBuilder = ({ exerciseId, onClose }: ExerciseBuilderProps) =
 
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
-  const [bodyRegion, setBodyRegion] = useState('Hüftbeuger (M. iliopsoas)');
+  // Erster gültiger Wert aus den neuen 11 Regionen als sicherer Default
+  const [bodyRegion, setBodyRegion] = useState<BodyRegion>('Hals & Nacken');
   const [isUnilateral, setIsUnilateral] = useState(false);
   const [rating, setRating] = useState(5);
 
@@ -33,8 +35,8 @@ export const ExerciseBuilder = ({ exerciseId, onClose }: ExerciseBuilderProps) =
     if (!name.trim()) return;
 
     const exerciseData = {
-      name,
-      description,
+      name: name.trim(),
+      description: description.trim() || undefined,
       bodyRegion,
       isUnilateral,
       rating,
@@ -77,37 +79,22 @@ export const ExerciseBuilder = ({ exerciseId, onClose }: ExerciseBuilderProps) =
             onChange={(e) => setName(e.target.value)}
             placeholder="z.B. Couch Stretch"
             className="w-full bg-white/[0.02] border border-white/[0.06] rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-sky-500 text-slate-200 placeholder-slate-600 transition-colors"
+            required
           />
         </div>
 
         <div>
-          <label className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block mb-1.5 pl-1">Präzise Muskelgruppe (Zielregion)</label>
+          <label className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block mb-1.5 pl-1">Kinetische Zielregion (Funktionskette)</label>
           <select
             value={bodyRegion}
-            onChange={(e) => setBodyRegion(e.target.value)}
-            className="w-full bg-[#0d1013] border border-white/[0.06] rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-sky-500 text-slate-200 transition-colors"
+            onChange={(e) => setBodyRegion(e.target.value as BodyRegion)}
+            className="w-full bg-[#0d1013] border border-white/[0.06] rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-sky-500 text-slate-200 transition-colors appearance-none"
           >
-            <optgroup label="Hüfte & Becken">
-              <option value="Hüftbeuger (M. iliopsoas)">🔹 Hüftbeuger (M. iliopsoas)</option>
-              <option value="Glutealmuskulatur (Gesäß)">🔹 Glutealmuskulatur (Gesäß)</option>
-              <option value="Piriformis & Außenrotatoren">🔹 Piriformis & Außenrotatoren</option>
-            </optgroup>
-            <optgroup label="Oberschenkel & Unterschenkel">
-              <option value="Ischiocrurale Muskulatur (Hamstrings)">🔹 Ischiocrurale Muskulatur (Hamstrings)</option>
-              <option value="Oberschenkelvorderseite (Quadrizeps)">🔹 Oberschenkelvorderseite (Quadrizeps)</option>
-              <option value="Adduktoren (Oberschenkelinnenseite)">🔹 Adduktoren (Oberschenkelinnenseite)</option>
-              <option value="Wadenmuskulatur (M. gastrocnemius/soleus)">🔹 Wadenmuskulatur (M. gastrocnemius/soleus)</option>
-            </optgroup>
-            <optgroup label="Rücken & Rumpf">
-              <option value="Lendenwirbelsäule & Unterer Rücken">🔹 Lendenwirbelsäule & Unterer Rücken</option>
-              <option value="Brustwirbelsäule & Übertragener Rumpf">🔹 Brustwirbelsäule & Übertragener Rumpf</option>
-              <option value="M. latissimus dorsi (Seitlicher Rücken)">🔹 M. latissimus dorsi (Seitlicher Rücken)</option>
-            </optgroup>
-            <optgroup label="Oberkörper & Nacken">
-              <option value="Brustmuskulatur (M. pectoralis)">🔹 Brustmuskulatur (M. pectoralis)</option>
-              <option value="Hals- & Nackenmuskulatur (Trapezius)">🔹 Hals- & Nackenmuskulatur (Trapezius)</option>
-              <option value="Schulthergürtel (Rotatorenmanschette)">🔹 Schultergürtel (Rotatorenmanschette)</option>
-            </optgroup>
+            {AVAILABLE_REGIONS.map((region) => (
+              <option key={region.value} value={region.value}>
+                {region.icon} {region.label}
+              </option>
+            ))}
           </select>
         </div>
 
