@@ -6,30 +6,25 @@ interface RoutineRunnerProps {
   onClose: () => void;
 }
 
-// Wir definieren die Phasen exakt als State-Maschine
 type RunnerPhase = 'EXERCISE' | 'RATING' | 'BREAK' | 'FINISHED';
 
 export const RoutineRunner = ({ programId, onClose }: RoutineRunnerProps) => {
   const { library, programs, addHistoryEntry } = useStore();
   
-  // Indizes und Phasensteuerung
   const [index, setIndex] = useState<number>(0);
   const [phase, setPhase] = useState<RunnerPhase>('EXERCISE');
   
-  // Timer-Zustände
   const [timeLeft, setTimeLeft] = useState<number>(0);
   const [isActive, setIsActive] = useState<boolean>(false);
   
-  // Historie der aktuellen Session
   const [completedExercises, setCompletedExercises] = useState<PerformedExercise[]>([]);
 
-  // Datenauflösung aus dem Store
   const program = programs.find(p => p.id === programId);
   const programExercises = program ? program.exercises : [];
   const currentProgramData = programExercises[index];
   const currentExerciseData = library.find(e => e.id === currentProgramData?.exerciseId);
 
-  // 1. Initialisierung der Zeit bei Phasen- oder Indexwechsel
+  // 1. Phasen- und Zeit-Initialisierung
   useEffect(() => {
     if (!currentProgramData) {
       setPhase('FINISHED');
@@ -38,15 +33,14 @@ export const RoutineRunner = ({ programId, onClose }: RoutineRunnerProps) => {
 
     if (phase === 'EXERCISE') {
       setTimeLeft(currentProgramData.duration || 30);
-      setIsActive(false); // Startet pausiert, wartet auf "Start"
+      // Aktive Übung wartet bewusst auf den manuellen Start
     } else if (phase === 'BREAK') {
-      // Nutzt die eingestellte Pause, falls vorhanden, sonst Fallback auf 10 Sekunden Default
+      // Nutzt die programmierte Pause oder standardmäßig 10 Sekunden
       setTimeLeft(currentProgramData.breakDuration ?? 10);
-      setIsActive(true); // Pause startet automatisch für besseren Flow
     }
   }, [index, phase, currentProgramData]);
 
-  // 2. Der unzerstörbare Core-Timer (Direkt in der Komponente via setInterval)
+  // 2. Der interne Timer-Loop
   useEffect(() => {
     let interval: any = null;
 
@@ -64,19 +58,18 @@ export const RoutineRunner = ({ programId, onClose }: RoutineRunnerProps) => {
     };
   }, [isActive, timeLeft]);
 
-  // 3. Automatische Phasenübergänge nach Ablauf der Zeit
+  // 3. Automatischer Ablauf nach Zeit-Ende
   const handlePhaseTimeout = () => {
     if (phase === 'EXERCISE') {
-      // Übung vorbei -> Direkt in das Rating-Schnittstelle zwingen
       setPhase('RATING');
     } else if (phase === 'BREAK') {
-      // Pause vorbei -> Nächste Übung laden
+      // Pause von alleine abgelaufen -> Nächste Übung vorbereiten (pausiert)
       setPhase('EXERCISE');
       setIndex((i) => i + 1);
     }
   };
 
-  // Manuelle Skip-Aktion steuert exakt dieselbe Logik an
+  // Manueller Skip-Button
   const handleSkip = () => {
     setIsActive(false);
     if (phase === 'EXERCISE') {
@@ -91,7 +84,7 @@ export const RoutineRunner = ({ programId, onClose }: RoutineRunnerProps) => {
     setIsActive((prev) => !prev);
   }, []);
 
-  // 4. Verarbeitung der 1-10 Bewertung
+  // 4. Bewertung abgeben -> Hier startet die Pause jetzt SOFORT automatisch
   const handleRatingSelection = (ratingValue: number) => {
     if (!currentProgramData || !currentExerciseData) return;
 
@@ -107,7 +100,6 @@ export const RoutineRunner = ({ programId, onClose }: RoutineRunnerProps) => {
     const updatedExercises = [...completedExercises, currentPerformed];
     setCompletedExercises(updatedExercises);
 
-    // Prüfen, ob das die letzte Übung im Programm war
     if (index >= programExercises.length - 1) {
       if (program) {
         addHistoryEntry({
@@ -123,12 +115,13 @@ export const RoutineRunner = ({ programId, onClose }: RoutineRunnerProps) => {
       }
       setPhase('FINISHED');
     } else {
-      // Es folgen weitere Übungen -> Jetzt in die Pause wechseln
+      // DER ENTSCHEIDENDE FIX: Phase wechseln UND den Timer direkt aktivieren!
       setPhase('BREAK');
+      setIsActive(true); 
     }
   };
 
-  // INTERFACE: ABSCHLUSS-SCREEN
+  // INTERFACE: ENTHUSIASTISCHER ABSCHLUSS
   if (phase === 'FINISHED' || !currentProgramData || !currentExerciseData || !program) {
     return (
       <div className="flex flex-col items-center justify-center p-6 h-screen bg-[#0a0a0a] text-white gap-8">
@@ -148,7 +141,7 @@ export const RoutineRunner = ({ programId, onClose }: RoutineRunnerProps) => {
     );
   }
 
-  // INTERFACE: BEWERTUNGS-SCREEN (1-10)
+  // INTERFACE: INTERAKTIVES RATING
   if (phase === 'RATING') {
     return (
       <div className="fixed inset-0 bg-[#0a0a0a] text-white p-6 flex flex-col items-center justify-center gap-6 z-50">
@@ -179,7 +172,7 @@ export const RoutineRunner = ({ programId, onClose }: RoutineRunnerProps) => {
     );
   }
 
-  // INTERFACE: REGULÄRER WORKOUT- & PAUSEN-TIMER
+  // INTERFACE: LIVE-WORKOUT & AUTOMATISCHE PAUSE
   return (
     <div className="flex flex-col items-center p-6 gap-6 text-white pt-16 min-h-screen bg-[#0a0a0a]">
       <div className="text-center w-full px-2">
@@ -200,7 +193,6 @@ export const RoutineRunner = ({ programId, onClose }: RoutineRunnerProps) => {
         {timeLeft}
       </div>
 
-      {/* Übungsbeschreibung: Nur während der aktiven Belastung sichtbar */}
       {phase === 'EXERCISE' && currentExerciseData.description && (
         <div className="bg-[#1a1a1a] border border-[#333] p-4 rounded-xl text-sm text-slate-300 max-w-md w-full text-center overflow-y-auto max-h-32 shadow-inner">
           {currentExerciseData.description}
@@ -208,12 +200,11 @@ export const RoutineRunner = ({ programId, onClose }: RoutineRunnerProps) => {
       )}
 
       {phase === 'BREAK' && (
-        <div className="text-sm text-slate-500 italic h-16 flex items-center text-center px-4">
-          Lockern, tief durchatmen und vorbereiten...
+        <div className="text-sm text-emerald-500 font-medium italic h-16 flex items-center text-center px-4 animate-pulse">
+          Pause läuft... Atme tief in den Bauch ein.
         </div>
       )}
 
-      {/* Kontrolltasten */}
       <div className="grid grid-cols-3 gap-4 w-full mt-auto mb-6">
         <button 
           onClick={toggleTimer} 
@@ -238,7 +229,6 @@ export const RoutineRunner = ({ programId, onClose }: RoutineRunnerProps) => {
   );
 };
 
-// Hilfsfunktion zur Ermittlung des Namens der nachfolgenden Übung außerhalb der Render-Zyklen
 const getNextExerciseName = (programExercises: any[], library: any[], currentIndex: number) => {
   const nextProgramData = programExercises[currentIndex + 1];
   if (!nextProgramData) return "Fertig";
