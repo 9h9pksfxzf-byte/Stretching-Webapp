@@ -97,7 +97,13 @@ export default function App() {
                 + Programm
               </button>
             </header>
-            <ProgramGrid onSelect={(id) => { setActiveProgramId(id); setOverlay('active'); }} onEdit={(id) => { setEditingId(id); setOverlay('build-program'); }} />
+            
+            {/* Hier wurden die Props und Typspezifikationen exakt angeglichen */}
+            <ProgramGrid 
+              onStartProgram={(id: string) => { setActiveProgramId(id); setOverlay('active'); }} 
+              onEditProgram={(id: string) => { setEditingId(id); setOverlay('build-program'); }} 
+              onCreateProgram={() => { setEditingId(null); setOverlay('build-program'); }}
+            />
           </section>
         )}
 
