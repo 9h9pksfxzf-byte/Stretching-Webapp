@@ -1,7 +1,6 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 
-// 1. Vollständige Typendefinitionen für alle Komponenten
 export interface Exercise {
   id: string;
   name: string;
@@ -13,8 +12,6 @@ export interface Exercise {
 
 export interface ProgramExercise {
   exerciseId: string;
-  // Dauer und Pausen müssen verpflichtend (ohne ?) sein, damit 
-  // der ProgramBuilder Berechnungen ohne TS-Fehler durchführen kann.
   duration: number;
   breakDuration: number;
   side?: 'Links' | 'Rechts' | 'Beide';
@@ -49,26 +46,23 @@ export interface StoreState {
   programs: Program[];
   history: HistoryEntry[];
   
-  // Aktionen für die Historie
   addHistoryEntry: (entry: HistoryEntry) => void;
   clearHistory: () => void;
 
-  // Aktionen für den ExerciseBuilder
   addExercise: (exercise: Exercise) => void;
-  updateExercise: (exercise: Exercise) => void;
+  // HOTFIX: Akzeptiert jetzt (id, data) ODER nur (data), um TS2554 zu killen
+  updateExercise: (idOrExercise: string | Exercise, maybeExercise?: Exercise) => void;
   deleteExercise: (id: string) => void;
 
-  // Aktionen für den ProgramBuilder
   addProgram: (program: Program) => void;
-  updateProgram: (program: Program) => void;
+  // HOTFIX: Akzeptiert ebenfalls beide Argument-Varianten
+  updateProgram: (idOrProgram: string | Program, maybeProgram?: Program) => void;
   deleteProgram: (id: string) => void;
 }
 
-// 2. Initialdaten (Nur relevant für den allerersten Start)
 const INITIAL_LIBRARY: Exercise[] = [];
 const INITIAL_PROGRAMS: Program[] = [];
 
-// 3. Store-Erstellung mit globaler Persistenz
 export const useStore = create<StoreState>()(
   persist(
     (set) => ({
@@ -76,35 +70,41 @@ export const useStore = create<StoreState>()(
       programs: INITIAL_PROGRAMS,
       history: [],
 
-      // --- Historie Methoden ---
       addHistoryEntry: (entry) => 
         set((state) => ({ history: [...state.history, entry] })),
         
       clearHistory: () => 
         set(() => ({ history: [] })),
 
-      // --- Exercise Methoden ---
       addExercise: (exercise) => 
         set((state) => ({ library: [...state.library, exercise] })),
         
-      updateExercise: (exercise) => 
-        set((state) => ({
-          library: state.library.map((e) => (e.id === exercise.id ? exercise : e))
-        })),
+      updateExercise: (idOrExercise, maybeExercise) => 
+        set((state) => {
+          // Logik prüft, ob das erste Argument eine ID (String) oder das Objekt selbst ist
+          const updated = typeof idOrExercise === 'string' ? maybeExercise : idOrExercise;
+          if (!updated) return state;
+          return {
+            library: state.library.map((e) => (e.id === updated.id ? updated : e))
+          };
+        }),
         
       deleteExercise: (id) => 
         set((state) => ({
           library: state.library.filter((e) => e.id !== id)
         })),
 
-      // --- Program Methoden ---
       addProgram: (program) => 
         set((state) => ({ programs: [...state.programs, program] })),
         
-      updateProgram: (program) => 
-        set((state) => ({
-          programs: state.programs.map((p) => (p.id === program.id ? program : p))
-        })),
+      updateProgram: (idOrProgram, maybeProgram) => 
+        set((state) => {
+          const updated = typeof idOrProgram === 'string' ? maybeProgram : idOrProgram;
+          if (!updated) return state;
+          return {
+            programs: state.programs.map((p) => (p.id === updated.id ? updated : p))
+          };
+        }),
         
       deleteProgram: (id) => 
         set((state) => ({
@@ -114,8 +114,6 @@ export const useStore = create<StoreState>()(
     {
       name: 'stretching-app-storage',
       storage: createJSONStorage(() => localStorage),
-      // Die partialize-Einschränkung wurde entfernt. Da du Builder nutzt, 
-      // muss der gesamte Zustand (Library, Programme, Historie) gesichert werden.
     }
   )
 );
