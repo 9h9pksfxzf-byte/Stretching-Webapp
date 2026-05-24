@@ -1,106 +1,195 @@
-import { useState } from 'react';
-import { useStore, ProgramExercise } from '../store/useStore';
+import { useState, useEffect } from 'react';
+import { useStore } from '../store/useStore';
 
 interface ProgramBuilderProps {
+  programId: string | null;
   onClose: () => void;
-  programId?: string | null;
 }
 
-export const ProgramBuilder = ({ onClose, programId }: ProgramBuilderProps) => {
-  const { library, addProgram, updateProgram, programs } = useStore();
-  const existing = programs.find((p) => p.id === programId);
+interface LocalSelectedExercise {
+  exerciseId: string;
+  duration: number;
+  breakDuration: number;
+}
 
-  const [name, setName] = useState(existing?.name || '');
-  const [exercises, setExercises] = useState<ProgramExercise[]>(existing?.exercises || []);
+export const ProgramBuilder = ({ programId, onClose }: ProgramBuilderProps) => {
+  const { library, programs, addProgram, updateProgram } = useStore();
 
-  const addExercise = (exerciseId: string) => {
-    const ex = library.find((e) => e.id === exerciseId);
-    if (!ex) return;
+  const [name, setName] = useState('');
+  const [timeLabel, setTimeLabel] = useState('Morgens');
+  const [selectedExercises, setSelectedExercises] = useState<LocalSelectedExercise[]>([]);
 
-    if (ex.isUnilateral) {
-      // 1. Ansatz: Zwei separate Einträge hinzufügen
-      setExercises((prev) => [
-        ...prev,
-        { exerciseId, duration: 30, breakDuration: 10, side: 'Links' },
-        { exerciseId, duration: 30, breakDuration: 10, side: 'Rechts' }
-      ]);
-    } else {
-      setExercises((prev) => [
-        ...prev,
-        { exerciseId, duration: 30, breakDuration: 10 }
-      ]);
+  useEffect(() => {
+    if (programId) {
+      const prog = programs.find((p) => p.id === programId);
+      if (prog) {
+        setName(prog.name);
+        setTimeLabel(prog.timeLabel || 'Morgens');
+        setSelectedExercises(prog.exercises || []);
+      }
     }
+  }, [programId, programs]);
+
+  const handleAddExerciseSlot = (exerciseId: string) => {
+    setSelectedExercises((prev) => [
+      ...prev,
+      { exerciseId, duration: 45, breakDuration: 15 },
+    ]);
   };
 
-  const removeExercise = (index: number) => {
-    setExercises((prev) => prev.filter((_, i) => i !== index));
+  const handleRemoveSlot = (indexToRemove: number) => {
+    setSelectedExercises((prev) => prev.filter((_, idx) => idx !== indexToRemove));
   };
 
-  const updateTime = (index: number, key: keyof ProgramExercise, value: number) => {
-    setExercises((prev) => prev.map((ex, i) => (i === index ? { ...ex, [key]: value } : ex)));
+  const handleUpdateSlot = (index: number, key: 'duration' | 'breakDuration', value: number) => {
+    setSelectedExercises((prev) =>
+      prev.map((slot, idx) => (idx === index ? { ...slot, [key]: value } : slot))
+    );
   };
 
-  const handleSave = () => {
-    if (!name.trim() || exercises.length === 0) return;
-    
-    const prog = {
-      id: existing?.id || Date.now().toString(),
+  const handleSave = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!name.trim() || selectedExercises.length === 0) return;
+
+    const programData = {
       name,
-      timeLabel: `${Math.round(exercises.reduce((a, b) => a + b.duration + b.breakDuration, 0) / 60)} min`,
-      icon: '🔥',
-      exercises,
+      timeLabel,
+      exercises: selectedExercises,
     };
 
-    existing ? updateProgram(prog.id, prog) : addProgram(prog);
+    if (programId) {
+      updateProgram(programId, programData);
+    } else {
+      addProgram(programData);
+    }
     onClose();
   };
 
   return (
-    <div className="p-6 text-white pb-32">
-      <header className="flex justify-between items-center mb-8">
-        <h2 className="text-2xl font-bold">{existing ? 'Programm bearbeiten' : 'Neues Programm'}</h2>
-        <button onClick={onClose} className="text-slate-400">Abbrechen</button>
+    <div className="flex flex-col text-slate-100 bg-gradient-to-b from-[#0d0f12] via-[#08090a] to-[#030405] h-[100dvh] fixed inset-0 box-border overflow-hidden p-5 select-none max-w-lg mx-auto">
+      <header className="flex justify-between items-center pt-4 pb-2 flex-shrink-0">
+        <div>
+          <h1 className="text-xl font-black tracking-tight text-white">
+            {programId ? 'Programm editieren' : 'Neues Programm'}
+          </h1>
+          <p className="text-emerald-400/80 font-medium text-[10px] tracking-wider uppercase mt-0.5">
+            Routine-Strukturierung
+          </p>
+        </div>
+        <button
+          onClick={onClose}
+          className="bg-white/[0.04] hover:bg-white/[0.08] text-slate-300 text-xs font-bold px-3 py-1.5 rounded-xl border border-white/[0.04] active:scale-95 transition-all"
+        >
+          Abbrechen
+        </button>
       </header>
 
-      <input 
-        value={name}
-        onChange={(e) => setName(e.target.value)}
-        className="w-full bg-[#1a1a1a] border border-[#333] rounded-xl p-4 mb-6"
-        placeholder="Programmname"
-      />
-
-      <div className="flex flex-col gap-3 mb-8">
-        {exercises.map((pEx, i) => (
-          <div key={i} className="bg-[#1a1a1a] border border-[#333] rounded-xl p-4">
-            <div className="flex justify-between mb-3">
-              <span className="font-bold">
-                {library.find(e => e.id === pEx.exerciseId)?.name} 
-                {pEx.side && <span className="text-emerald-500 ml-2">({pEx.side})</span>}
-              </span>
-              <button onClick={() => removeExercise(i)} className="text-red-500 text-sm">Löschen</button>
-            </div>
-            <div className="flex gap-4">
-              <input type="number" value={pEx.duration} onChange={(e) => updateTime(i, 'duration', Number(e.target.value))} className="w-1/2 bg-[#0a0a0a] p-2 rounded border border-[#333] text-center" placeholder="Dauer" />
-              <input type="number" value={pEx.breakDuration} onChange={(e) => updateTime(i, 'breakDuration', Number(e.target.value))} className="w-1/2 bg-[#0a0a0a] p-2 rounded border border-[#333] text-center" placeholder="Pause" />
-            </div>
-          </div>
-        ))}
-      </div>
-
-      <div className="border-t border-[#333] pt-6">
-        <h3 className="text-slate-400 mb-4">Bibliothek (Unilaterale Übungen werden 2x hinzugefügt):</h3>
-        <div className="flex flex-wrap gap-2">
-          {library.map((ex) => (
-            <button key={ex.id} onClick={() => addExercise(ex.id)} className="bg-[#1a1a1a] border border-[#333] px-4 py-2 rounded-full text-sm">
-              + {ex.name}
-            </button>
-          ))}
+      <form onSubmit={handleSave} className="flex-grow overflow-y-auto space-y-4 pt-4 pb-24 scrollbar-none">
+        <div>
+          <label className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block mb-1.5 pl-1">Programm-Name</label>
+          <input
+            type="text"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="z.B. Full Body Flow"
+            className="w-full bg-white/[0.02] border border-white/[0.06] rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-emerald-500 text-slate-200 placeholder-slate-600"
+          />
         </div>
-      </div>
 
-      <button onClick={handleSave} className="fixed bottom-6 left-6 right-6 bg-emerald-600 py-4 rounded-xl font-bold">
-        Speichern
-      </button>
+        <div>
+          <label className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block mb-1.5 pl-1">Zugeordnete Tageszeit</label>
+          <select
+            value={timeLabel}
+            onChange={(e) => setTimeLabel(e.target.value)}
+            className="w-full bg-[#0d1013] border border-white/[0.06] rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-emerald-500 text-slate-200"
+          >
+            <option value="Morgens">🌅 Morgens</option>
+            <option value="Mittags">☀️ Mittags</option>
+            <option value="Abends">🌌 Abends</option>
+            <option value="Flexibel">🔄 Flexibel</option>
+          </select>
+        </div>
+
+        {/* Ausgewählte Übungen im Programm */}
+        <div className="space-y-2.5">
+          <label className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block pl-1">Ablauf-Reihenfolge</label>
+          {selectedExercises.length === 0 ? (
+            <div className="bg-white/[0.01] border border-white/[0.04] rounded-xl p-4 text-center text-xs text-slate-500 italic">
+              Füge unten Übungen aus der Bibliothek hinzu.
+            </div>
+          ) : (
+            selectedExercises.map((slot, idx) => {
+              const exData = library.find((e) => e.id === slot.exerciseId);
+              return (
+                <div key={idx} className="bg-white/[0.02] border border-white/[0.04] p-3.5 rounded-xl flex flex-col gap-3">
+                  <div className="flex justify-between items-center">
+                    <div>
+                      <span className="text-[10px] font-mono font-bold bg-white/[0.05] px-1.5 py-0.5 rounded text-slate-400 mr-2">#{idx+1}</span>
+                      <span className="text-xs font-bold text-slate-200">{exData?.name || 'Gelöschte Übung'}</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveSlot(idx)}
+                      className="text-[10px] text-red-400 bg-red-500/10 px-2 py-1 rounded-lg border border-red-500/10 active:scale-90"
+                    >
+                      Entfernen
+                    </button>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-[9px] text-slate-500 uppercase tracking-wider block mb-1">Dauer (Sekunden)</label>
+                      <input
+                        type="number"
+                        value={slot.duration}
+                        onChange={(e) => handleUpdateSlot(idx, 'duration', Number(e.target.value))}
+                        className="w-full bg-slate-950 border border-white/[0.04] rounded-lg px-2.5 py-1.5 font-mono text-xs text-slate-200"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[9px] text-slate-500 uppercase tracking-wider block mb-1">Pause (Sekunden)</label>
+                      <input
+                        type="number"
+                        value={slot.breakDuration}
+                        onChange={(e) => handleUpdateSlot(idx, 'breakDuration', Number(e.target.value))}
+                        className="w-full bg-slate-950 border border-white/[0.04] rounded-lg px-2.5 py-1.5 font-mono text-xs text-slate-200"
+                      />
+                    </div>
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </div>
+
+        {/* Hinzufügbare Übungen aus Library */}
+        <div className="space-y-2 pt-2">
+          <label className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block pl-1">Aus Bibliothek hinzufügen</label>
+          <div className="grid grid-cols-1 gap-2 max-h-48 overflow-y-auto pr-0.5 unique-scrollbar">
+            {library.map((ex) => (
+              <button
+                key={ex.id}
+                type="button"
+                onClick={() => handleAddExerciseSlot(ex.id)}
+                className="w-full text-left bg-white/[0.01] hover:bg-white/[0.03] border border-white/[0.03] p-2.5 rounded-xl flex justify-between items-center text-xs active:scale-[0.99]"
+              >
+                <div>
+                  <span className="font-bold text-slate-300">{ex.name}</span>
+                  <span className="text-[9px] text-slate-500 ml-2">({ex.bodyRegion})</span>
+                </div>
+                <span className="text-emerald-400 font-bold text-sm bg-emerald-500/10 w-6 h-6 rounded-lg flex items-center justify-center">+</span>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <button
+          type="submit"
+          className="w-full py-4 mt-4 rounded-xl font-bold text-sm uppercase tracking-wider bg-gradient-to-r from-emerald-600 to-emerald-500 text-white shadow-[0_4px_15px_rgba(16,185,129,0.2)] transition-all active:scale-[0.98]"
+        >
+          Programm-Ablauf speichern
+        </button>
+      </form>
     </div>
   );
 };
