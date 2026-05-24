@@ -9,54 +9,87 @@ export interface LibraryExercise {
   id: string;
   name: string;
   category: string;
-  duration: number; // Standarddauer in Sekunden
+}
+
+export interface ProgramExercise extends LibraryExercise {
+  duration: number; // Individuelle Dehndauer in Sekunden
+  rest: number;     // Individuelle Pausendauer in Sekunden
 }
 
 interface BuilderState {
   programName: string;
-  selectedExercises: LibraryExercise[];
+  selectedExercises: ProgramExercise[];
   activeCategory: string;
+  defaultDuration: number;
+  defaultRest: number;
   library: LibraryExercise[];
+  // Actions
   setProgramName: (name: string) => void;
+  setDefaultDuration: (seconds: number) => void;
+  setDefaultRest: (seconds: number) => void;
   addExercise: (exercise: LibraryExercise) => void;
   removeExercise: (index: number) => void;
+  updateExerciseTime: (index: number, duration: number, rest: number) => void;
   setCategory: (category: string) => void;
   clearBuilder: () => void;
 }
 
 const MOCK_LIBRARY: LibraryExercise[] = [
-  { id: '1', name: 'Psoas-Zwerchfell-Integration', category: 'LWS & Core', duration: 60 },
-  { id: '2', name: 'Supta Matsyendrasana (Krokodil)', category: 'LWS & Core', duration: 60 },
-  { id: '3', name: 'Sphinx Pose (Sanfte Extension)', category: 'LWS & Core', duration: 60 },
-  { id: '4', name: "World's Greatest Stretch", category: 'Hüfte', duration: 60 },
-  { id: '5', name: 'Couch Stretch', category: 'Hüfte', duration: 60 },
-  { id: '6', name: '90/90 Hüftrotatoren', category: 'Hüfte', duration: 60 },
-  { id: '7', name: 'Puppy Pose', category: 'Brust & BWS', duration: 60 },
+  { id: '1', name: 'Psoas-Zwerchfell-Integration', category: 'LWS & Core' },
+  { id: '2', name: 'Supta Matsyendrasana (Krokodil)', category: 'LWS & Core' },
+  { id: '3', name: 'Sphinx Pose (Sanfte Extension)', category: 'LWS & Core' },
+  { id: '4', name: "World's Greatest Stretch", category: 'Hüfte' },
+  { id: '5', name: 'Couch Stretch', category: 'Hüfte' },
+  { id: '6', name: '90/90 Hüftrotatoren', category: 'Hüfte' },
+  { id: '7', name: 'Puppy Pose', category: 'Brust & BWS' },
 ];
 
 export const useProgramBuilderStore = create<BuilderState>((set) => ({
   programName: '15 Minuten',
   selectedExercises: [],
   activeCategory: 'Alle',
+  defaultDuration: 45,
+  defaultRest: 15,
   library: MOCK_LIBRARY,
 
   setProgramName: (programName) => set({ programName }),
-  
+  setDefaultDuration: (defaultDuration) => set({ defaultDuration }),
+  setDefaultRest: (defaultRest) => set({ defaultRest }),
+
   addExercise: (exercise) => set((state) => ({
-    selectedExercises: [...state.selectedExercises, exercise]
+    selectedExercises: [
+      ...state.selectedExercises, 
+      { 
+        ...exercise, 
+        duration: state.defaultDuration, 
+        rest: state.defaultRest 
+      }
+    ]
   })),
   
   removeExercise: (index) => set((state) => ({
     selectedExercises: state.selectedExercises.filter((_, i) => i !== index)
   })),
+
+  updateExerciseTime: (index, duration, rest) => set((state) => {
+    const updated = [...state.selectedExercises];
+    updated[index] = { ...updated[index], duration, rest };
+    return { selectedExercises: updated };
+  }),
   
   setCategory: (activeCategory) => set({ activeCategory }),
   
-  clearBuilder: () => set({ programName: '15 Minuten', selectedExercises: [], activeCategory: 'Alle' })
+  clearBuilder: () => set({ 
+    programName: '15 Minuten', 
+    selectedExercises: [], 
+    activeCategory: 'Alle',
+    defaultDuration: 45,
+    defaultRest: 15
+  })
 }));
 
 // ==========================================
-// 2. UI PROPS INTERFACE (Wichtig für App.tsx)
+// 2. UI PROPS INTERFACE
 // ==========================================
 interface ProgramBuilderProps {
   programId?: string | null;
@@ -72,10 +105,15 @@ export const ProgramBuilder: React.FC<ProgramBuilderProps> = ({ onClose }) => {
     programName,
     selectedExercises,
     activeCategory,
+    defaultDuration,
+    defaultRest,
     library,
     setProgramName,
+    setDefaultDuration,
+    setDefaultRest,
     addExercise,
     removeExercise,
+    updateExerciseTime,
     setCategory,
     clearBuilder
   } = useProgramBuilderStore((state) => state);
@@ -86,15 +124,17 @@ export const ProgramBuilder: React.FC<ProgramBuilderProps> = ({ onClose }) => {
     ? library 
     : library.filter((e) => e.category === activeCategory);
 
-  const totalDurationMin = Math.ceil(selectedExercises.reduce((acc, curr) => acc + curr.duration, 0) / 60);
+  const totalDurationSec = selectedExercises.reduce((acc, curr) => acc + curr.duration + curr.rest, 0);
+  const totalDurationMin = Math.ceil(totalDurationSec / 60);
 
   const handleCancel = () => {
     clearBuilder();
-    onClose(); // Schließt das Overlay in App.tsx
+    onClose();
   };
 
   return (
     <div style={styles.screen}>
+      {/* Header */}
       <div style={styles.header}>
         <div>
           <span style={styles.metaLabel}>ROUTINE-STRUKTURIERUNG</span>
@@ -109,34 +149,84 @@ export const ProgramBuilder: React.FC<ProgramBuilderProps> = ({ onClose }) => {
         <button onClick={handleCancel} style={styles.cancelButton}>Abbrechen</button>
       </div>
 
+      {/* Standard-Vorgaben für schnelles Hinzufügen */}
+      <div style={styles.globalTimeSettings}>
+        <div style={styles.timeInputGroup}>
+          <label style={styles.timeLabel}>⏱️ STANDARD DEHNEN (S.)</label>
+          <input 
+            type="number" 
+            value={defaultDuration} 
+            onChange={(e) => setDefaultDuration(Number(e.target.value))}
+            style={styles.timeInput}
+          />
+        </div>
+        <div style={styles.timeInputGroup}>
+          <label style={styles.timeLabel}>⏸️ STANDARD PAUSE (S.)</label>
+          <input 
+            type="number" 
+            value={defaultRest} 
+            onChange={(e) => setDefaultRest(Number(e.target.value))}
+            style={styles.timeInput}
+          />
+        </div>
+      </div>
+
+      {/* Ablauf-Stack mit individueller inline Zeitkonfiguration */}
       <div style={styles.stackSection}>
         <div style={styles.sectionHeader}>
           <span style={styles.sectionTitle}>DEIN ABLAUF ({totalDurationMin} Min)</span>
-          <span style={styles.exerciseCount}>{selectedExercises.length} Übungen</span>
+          <span style={styles.exerciseCount}>{selectedExercises.length} Sätze</span>
         </div>
         
         <div style={styles.horizontalScroll}>
           {selectedExercises.length === 0 ? (
             <div style={styles.emptyStackPlaceholder}>
-              Tippe unten auf das "+" für ein schnelles Hinzufügen
+              Füge unten Übungen hinzu, um die Zeiten pro Übung anzupassen.
             </div>
           ) : (
-            selectedExercises.map((exercise: LibraryExercise, index: number) => (
+            selectedExercises.map((exercise: ProgramExercise, index: number) => (
               <div key={`${exercise.id}-${index}`} style={styles.stackItem}>
-                <span style={styles.stackItemNumber}>{index + 1}</span>
-                <span style={styles.stackItemName}>{exercise.name}</span>
-                <button 
-                  onClick={() => removeExercise(index)} 
-                  style={styles.removeItemButton}
-                >
-                  ✕
-                </button>
+                <div style={styles.stackItemTopRow}>
+                  <span style={styles.stackItemNumber}>{index + 1}</span>
+                  <span style={styles.stackItemName}>{exercise.name}</span>
+                  <button 
+                    onClick={() => removeExercise(index)} 
+                    style={styles.removeItemButton}
+                  >
+                    ✕
+                  </button>
+                </div>
+
+                {/* NEU: Individuelle Inputs direkt in der horizontalen Ablaufkarte */}
+                <div style={styles.inlineTimeEditor}>
+                  <div style={styles.inlineInputWrapper}>
+                    <span style={styles.inlineInputLabel}>⏱️ Zeit:</span>
+                    <input 
+                      type="number"
+                      value={exercise.duration}
+                      onChange={(e) => updateExerciseTime(index, Number(e.target.value), exercise.rest)}
+                      style={styles.inlineTimeInput}
+                    />
+                    <span style={styles.inlineUnit}>s</span>
+                  </div>
+                  <div style={styles.inlineInputWrapper}>
+                    <span style={styles.inlineInputLabel}>⏸️ Pause:</span>
+                    <input 
+                      type="number"
+                      value={exercise.rest}
+                      onChange={(e) => updateExerciseTime(index, exercise.duration, Number(e.target.value))}
+                      style={styles.inlineTimeInput}
+                    />
+                    <span style={styles.inlineUnit}>s</span>
+                  </div>
+                </div>
               </div>
             ))
           )}
         </div>
       </div>
 
+      {/* Filter-Pills */}
       <div style={styles.filterContainer}>
         {categories.map((cat) => (
           <button
@@ -153,6 +243,7 @@ export const ProgramBuilder: React.FC<ProgramBuilderProps> = ({ onClose }) => {
         ))}
       </div>
 
+      {/* Auswahl-Liste */}
       <div style={styles.librarySection}>
         <span style={styles.sectionTitleBottom}>AUS BIBLIOTHEK WÄHLEN</span>
         <div style={styles.verticalScroll}>
@@ -160,7 +251,7 @@ export const ProgramBuilder: React.FC<ProgramBuilderProps> = ({ onClose }) => {
             <div key={exercise.id} style={styles.exerciseCard}>
               <div style={styles.cardInfo}>
                 <span style={styles.cardName}>{exercise.name}</span>
-                <span style={styles.cardCategory}>{exercise.category} • {exercise.duration}s</span>
+                <span style={styles.cardCategory}>{exercise.category}</span>
               </div>
               <button 
                 onClick={() => addExercise(exercise)} 
@@ -173,12 +264,10 @@ export const ProgramBuilder: React.FC<ProgramBuilderProps> = ({ onClose }) => {
         </div>
       </div>
 
+      {/* Fixierter Footer */}
       <div style={styles.footer}>
         <button 
-          onClick={() => {
-            // Logik zum Speichern in deinen globalen Store hier einfügen, falls nötig
-            onClose();
-          }}
+          onClick={() => onClose()}
           style={{ 
             ...styles.saveButton, 
             opacity: selectedExercises.length > 0 ? 1 : 0.5 
@@ -241,10 +330,39 @@ const styles = {
     fontWeight: 'bold' as const,
     cursor: 'pointer',
   },
+  globalTimeSettings: {
+    display: 'flex',
+    gap: '16px',
+    padding: '0 16px 16px 16px',
+    borderBottom: '1px solid #111',
+  },
+  timeInputGroup: {
+    display: 'flex',
+    flexDirection: 'column' as const,
+    gap: '4px',
+    flex: 1,
+  },
+  timeLabel: {
+    fontSize: '10px',
+    color: '#666',
+    fontWeight: 'bold' as const,
+    letterSpacing: '0.5px',
+  },
+  timeInput: {
+    backgroundColor: '#111',
+    border: '1px solid #222',
+    borderRadius: '8px',
+    color: '#fff',
+    padding: '10px',
+    fontSize: '15px',
+    fontWeight: 'bold' as const,
+    outline: 'none',
+    textAlign: 'center' as const,
+  },
   stackSection: {
     backgroundColor: '#111',
     padding: '16px',
-    margin: '10px 16px',
+    margin: '16px',
     borderRadius: '16px',
     border: '1px solid #1a1a1a',
   },
@@ -274,9 +392,9 @@ const styles = {
   },
   horizontalScroll: {
     display: 'flex',
-    gap: '10px',
+    gap: '12px',
     overflowX: 'auto' as const,
-    paddingBottom: '8px',
+    paddingBottom: '10px',
     WebkitOverflowScrolling: 'touch' as const,
   },
   emptyStackPlaceholder: {
@@ -286,15 +404,21 @@ const styles = {
     padding: '10px 0',
   },
   stackItem: {
-    backgroundColor: '#1a1a1a',
-    border: '1px solid #282828',
-    padding: '8px 12px',
-    borderRadius: '10px',
+    backgroundColor: '#161616',
+    border: '1px solid #262626',
+    padding: '12px',
+    borderRadius: '12px',
+    display: 'flex',
+    flexDirection: 'column' as const,
+    gap: '10px',
+    flexShrink: 0,
+    minWidth: '190px',
+  },
+  stackItemTopRow: {
     display: 'flex',
     alignItems: 'center',
+    justifyContent: 'space-between',
     gap: '8px',
-    whiteSpace: 'nowrap' as const,
-    flexShrink: 0,
   },
   stackItemNumber: {
     background: '#00e676',
@@ -307,10 +431,17 @@ const styles = {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
+    flexShrink: 0,
   },
   stackItemName: {
-    fontSize: '14px',
-    fontWeight: '500' as const,
+    fontSize: '13px',
+    fontWeight: 'bold' as const,
+    color: '#fff',
+    whiteSpace: 'nowrap' as const,
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    flexGrow: 1,
+    maxWidth: '120px',
   },
   removeItemButton: {
     background: 'transparent',
@@ -318,7 +449,40 @@ const styles = {
     color: '#ff1744',
     fontSize: '14px',
     cursor: 'pointer',
-    padding: '0 0 0 4px',
+    padding: '0',
+  },
+  inlineTimeEditor: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    gap: '8px',
+    backgroundColor: '#0a0a0a',
+    padding: '6px 8px',
+    borderRadius: '8px',
+    border: '1px solid #1f1f1f',
+  },
+  inlineInputWrapper: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '2px',
+  },
+  inlineInputLabel: {
+    fontSize: '10px',
+    color: '#555',
+  },
+  inlineTimeInput: {
+    background: 'transparent',
+    border: 'none',
+    color: '#00e676',
+    fontSize: '12px',
+    fontWeight: 'bold' as const,
+    width: '28px',
+    textAlign: 'right' as const,
+    outline: 'none',
+    padding: '0',
+  },
+  inlineUnit: {
+    fontSize: '10px',
+    color: '#555',
   },
   filterContainer: {
     display: 'flex',
