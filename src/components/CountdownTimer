@@ -12,25 +12,23 @@ export const CountdownTimer: React.FC<CountdownTimerProps> = ({
   const [timeLeft, setTimeLeft] = useState<number>(initialDuration);
   const [isActive, setIsActive] = useState<boolean>(false);
   
-  // AudioContext-Referenz, um den Audio-Graph im Speicher zu halten
+  // Wir speichern den Context in einer Ref, initialisieren ihn aber absolut restriktiv
   const audioCtxRef = useRef<AudioContext | null>(null);
-
-  // Initialisiert den AudioContext sicher nach Benutzerinteraktion
-  const initAudio = () => {
-    if (!audioCtxRef.current) {
-      audioCtxRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
-    }
-    if (audioCtxRef.current.state === 'suspended') {
-      audioCtxRef.current.resume();
-    }
-  };
 
   // Synthetisiert einen Ton mit definierter Frequenz, Dauer und Lautstärken-Hüllkurve
   const playTone = (frequency: number, duration: number, type: 'sine' | 'square' = 'sine') => {
     try {
-      initAudio();
+      // Falls der Context noch nicht existiert (oder durch iOS suspendiert wurde), jetzt erzwingen
+      if (!audioCtxRef.current) {
+        audioCtxRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
+      }
+      
       const ctx = audioCtxRef.current;
-      if (!ctx) return;
+      
+      // iOS Absicherung: Wenn der Context schläft, reaktivieren
+      if (ctx.state === 'suspended') {
+        ctx.resume();
+      }
 
       const oscillator = ctx.createOscillator();
       const gainNode = ctx.createGain();
@@ -38,17 +36,17 @@ export const CountdownTimer: React.FC<CountdownTimerProps> = ({
       oscillator.type = type;
       oscillator.frequency.setValueAtTime(frequency, ctx.currentTime);
 
-      // Linearer Lautstärkenabfall (Gain Envelope), um Knackgeräusche zu verhindern
+      // Linearer Lautstärkenabfall, um Knackgeräusche zu verhindern
       gainNode.gain.setValueAtTime(0.2, ctx.currentTime); 
       gainNode.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + duration);
 
       oscillator.connect(gainNode);
       gainNode.connect(ctx.destination);
 
-      oscillator.start();
+      oscillator.start(ctx.currentTime);
       oscillator.stop(ctx.currentTime + duration);
     } catch (error) {
-      console.warn("Audio-Wiedergabe vom Browser blockiert:", error);
+      console.warn("Audio-Wiedergabe im Hintergrund blockiert:", error);
     }
   };
 
@@ -59,12 +57,10 @@ export const CountdownTimer: React.FC<CountdownTimerProps> = ({
       timerId = setTimeout(() => {
         const nextTime = timeLeft - 1;
         
-        // Signal-Logik für die letzten 3 Sekunden (Geändert auf nextTime === 3, 2, 1 für echten 3-Sekunden-Countdown)
+        // Signal-Logik für die letzten 3 Sekunden
         if (nextTime === 3 || nextTime === 2 || nextTime === 1) {
-          // Hoher, kurzer Piepton für den Countdown (880 Hz / A5)
           playTone(880, 0.1, 'sine');
         } else if (nextTime === 0) {
-          // Tieferer, längerer und satterer Abschlusston (440 Hz / A4 im Rechteck-Modus)
           playTone(440, 0.4, 'square');
           setIsActive(false);
           if (onComplete) onComplete();
@@ -78,13 +74,19 @@ export const CountdownTimer: React.FC<CountdownTimerProps> = ({
   }, [timeLeft, isActive]);
 
   const handleStartStop = () => {
-    initAudio(); 
+    // Absolut kritisch für iOS: Initialisierung und Erzeugung MUSS hier im Klick-Event synchron geschehen
+    if (!audioCtxRef.current) {
+      audioCtxRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
+    }
     
-    // CRITICAL FIX FÜR iOS:
-    // Wenn der Timer gestartet wird, spielen wir sofort einen unhörbaren Ton ab (Dauer 0.001s).
-    // Das entsperrt die Oszillator-Pipeline in iOS Safari dauerhaft für asynchrone Timeouts.
+    if (audioCtxRef.current.state === 'suspended') {
+      audioCtxRef.current.resume();
+    }
+
+    // Wenn der Timer gestartet wird, triggern wir SOFORT synchron im Klick-Event einen hörbaren,
+    // aber extrem kurzen "Freischalt-Ton". Das entsperrt die iOS-Audio-Engine dauerhaft.
     if (!isActive) {
-      playTone(440, 0.001, 'sine');
+      playTone(1200, 0.05, 'sine'); // Ein ganz kurzer, knackiger Bestätigungston beim Starten
     }
 
     setIsActive(!isActive);
@@ -95,14 +97,12 @@ export const CountdownTimer: React.FC<CountdownTimerProps> = ({
     setTimeLeft(initialDuration);
   };
 
-  // Hilfsfunktion zur Formatierung der MM:SS Anzeige
   const formatTime = (seconds: number): string => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
 
-  // Bestimmt die CSS-Klassen für die visuelle Hervorhebung der letzten 3 Sekunden
   const isCriticalZone = timeLeft <= 3 && timeLeft > 0;
 
   return (
