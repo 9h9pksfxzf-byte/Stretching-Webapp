@@ -52,15 +52,22 @@ export const useProgramBuilderStore = create<BuilderState>((set) => ({
   
   setCategory: (activeCategory) => set({ activeCategory }),
   
-  clearBuilder: () => set({ programName: '', selectedExercises: [], activeCategory: 'Alle' })
+  clearBuilder: () => set({ programName: '15 Minuten', selectedExercises: [], activeCategory: 'Alle' })
 }));
 
+// ==========================================
+// 2. UI PROPS INTERFACE (Wichtig für App.tsx)
+// ==========================================
+interface ProgramBuilderProps {
+  programId?: string | null;
+  onClose: () => void;
+}
 
 // ==========================================
-// 2. UI KOMPONENTE (NAMED EXPORT)
+// 3. UI KOMPONENTE (NAMED EXPORT)
 // ==========================================
 
-export const ProgramBuilder: React.FC = () => {
+export const ProgramBuilder: React.FC<ProgramBuilderProps> = ({ onClose }) => {
   const {
     programName,
     selectedExercises,
@@ -69,7 +76,8 @@ export const ProgramBuilder: React.FC = () => {
     setProgramName,
     addExercise,
     removeExercise,
-    setCategory
+    setCategory,
+    clearBuilder
   } = useProgramBuilderStore((state) => state);
 
   const categories = ['Alle', ...Array.from(new Set(library.map((e) => e.category)))];
@@ -79,6 +87,11 @@ export const ProgramBuilder: React.FC = () => {
     : library.filter((e) => e.category === activeCategory);
 
   const totalDurationMin = Math.ceil(selectedExercises.reduce((acc, curr) => acc + curr.duration, 0) / 60);
+
+  const handleCancel = () => {
+    clearBuilder();
+    onClose(); // Schließt das Overlay in App.tsx
+  };
 
   return (
     <div style={styles.screen}>
@@ -93,7 +106,7 @@ export const ProgramBuilder: React.FC = () => {
             placeholder="Programm-Name"
           />
         </div>
-        <button style={styles.cancelButton}>Abbrechen</button>
+        <button onClick={handleCancel} style={styles.cancelButton}>Abbrechen</button>
       </div>
 
       <div style={styles.stackSection}>
@@ -162,6 +175,10 @@ export const ProgramBuilder: React.FC = () => {
 
       <div style={styles.footer}>
         <button 
+          onClick={() => {
+            // Logik zum Speichern in deinen globalen Store hier einfügen, falls nötig
+            onClose();
+          }}
           style={{ 
             ...styles.saveButton, 
             opacity: selectedExercises.length > 0 ? 1 : 0.5 
@@ -176,7 +193,7 @@ export const ProgramBuilder: React.FC = () => {
 };
 
 // ==========================================
-// 3. STYLES
+// 4. STYLES
 // ==========================================
 
 const styles = {
@@ -222,6 +239,7 @@ const styles = {
     borderRadius: '20px',
     fontSize: '13px',
     fontWeight: 'bold' as const,
+    cursor: 'pointer',
   },
   stackSection: {
     backgroundColor: '#111',
@@ -317,6 +335,7 @@ const styles = {
     fontWeight: 'bold' as const,
     whiteSpace: 'nowrap' as const,
     transition: 'all 0.2s ease',
+    cursor: 'pointer',
   },
   librarySection: {
     flexGrow: 1,
@@ -382,5 +401,6 @@ const styles = {
     fontWeight: 'bold' as const,
     letterSpacing: '0.5px',
     boxShadow: '0 4px 20px rgba(0, 230, 118, 0.2)',
+    cursor: 'pointer',
   }
 };
