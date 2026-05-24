@@ -1,23 +1,29 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 
-// 1. Typendefinitionen (Abgeleitet aus deinem RoutineRunner)
+// 1. Vollständige Typendefinitionen für alle Komponenten
 export interface Exercise {
   id: string;
   name: string;
   description?: string;
+  bodyRegion?: string;
+  isUnilateral?: boolean;
+  rating?: number;
 }
 
 export interface ProgramExercise {
   exerciseId: string;
-  duration?: number;
-  breakDuration?: number;
+  // Dauer und Pausen müssen verpflichtend (ohne ?) sein, damit 
+  // der ProgramBuilder Berechnungen ohne TS-Fehler durchführen kann.
+  duration: number;
+  breakDuration: number;
   side?: 'Links' | 'Rechts' | 'Beide';
 }
 
 export interface Program {
   id: string;
   name: string;
+  timeLabel?: string;
   exercises: ProgramExercise[];
 }
 
@@ -38,63 +44,78 @@ export interface HistoryEntry {
   completedExercises: PerformedExercise[];
 }
 
-interface StoreState {
+export interface StoreState {
   library: Exercise[];
   programs: Program[];
   history: HistoryEntry[];
+  
+  // Aktionen für die Historie
   addHistoryEntry: (entry: HistoryEntry) => void;
   clearHistory: () => void;
+
+  // Aktionen für den ExerciseBuilder
+  addExercise: (exercise: Exercise) => void;
+  updateExercise: (exercise: Exercise) => void;
+  deleteExercise: (id: string) => void;
+
+  // Aktionen für den ProgramBuilder
+  addProgram: (program: Program) => void;
+  updateProgram: (program: Program) => void;
+  deleteProgram: (id: string) => void;
 }
 
-// 2. Initialdaten
-const INITIAL_LIBRARY: Exercise[] = [
-  { id: 'e1', name: 'Neck Stretch', description: 'Kopf sanft zur Seite neigen.' },
-  { id: 'e2', name: 'Shoulder Roll', description: 'Schultern kreisen lassen.' },
-  { id: 'e3', name: 'Hamstring Stretch', description: 'Bein ausstrecken und Oberkörper nach vorne beugen.' }
-];
+// 2. Initialdaten (Nur relevant für den allerersten Start)
+const INITIAL_LIBRARY: Exercise[] = [];
+const INITIAL_PROGRAMS: Program[] = [];
 
-const INITIAL_PROGRAMS: Program[] = [
-  {
-    id: 'p1',
-    name: 'Morning Routine',
-    exercises: [
-      { exerciseId: 'e1', duration: 30, breakDuration: 10, side: 'Links' },
-      { exerciseId: 'e1', duration: 30, breakDuration: 10, side: 'Rechts' },
-      { exerciseId: 'e2', duration: 45, breakDuration: 15 }
-    ]
-  }
-];
-
-// 3. Store-Erstellung mit persist Middleware
+// 3. Store-Erstellung mit globaler Persistenz
 export const useStore = create<StoreState>()(
   persist(
     (set) => ({
-      // Der initiale State
       library: INITIAL_LIBRARY,
       programs: INITIAL_PROGRAMS,
       history: [],
 
-      // Aktionen
-      addHistoryEntry: (entry: HistoryEntry) => 
+      // --- Historie Methoden ---
+      addHistoryEntry: (entry) => 
+        set((state) => ({ history: [...state.history, entry] })),
+        
+      clearHistory: () => 
+        set(() => ({ history: [] })),
+
+      // --- Exercise Methoden ---
+      addExercise: (exercise) => 
+        set((state) => ({ library: [...state.library, exercise] })),
+        
+      updateExercise: (exercise) => 
         set((state) => ({
-          history: [...state.history, entry]
+          library: state.library.map((e) => (e.id === exercise.id ? exercise : e))
+        })),
+        
+      deleteExercise: (id) => 
+        set((state) => ({
+          library: state.library.filter((e) => e.id !== id)
         })),
 
-      clearHistory: () => 
-        set(() => ({
-          history: []
+      // --- Program Methoden ---
+      addProgram: (program) => 
+        set((state) => ({ programs: [...state.programs, program] })),
+        
+      updateProgram: (program) => 
+        set((state) => ({
+          programs: state.programs.map((p) => (p.id === program.id ? program : p))
+        })),
+        
+      deleteProgram: (id) => 
+        set((state) => ({
+          programs: state.programs.filter((p) => p.id !== id)
         })),
     }),
     {
-      name: 'stretching-app-storage', // Der Key, unter dem die Daten im localStorage des Browsers liegen
+      name: 'stretching-app-storage',
       storage: createJSONStorage(() => localStorage),
-      
-      // OPTIONAL: Wenn du willst, dass bei einem App-Update neue Übungen (library/programs) 
-      // geladen werden, die Historie aber bleibt, filterst du hier den State.
-      // Wenn du partialize weglässt, wird der komplette Store (inkl. Library) gespeichert.
-      partialize: (state) => ({ 
-        history: state.history 
-      }),
+      // Die partialize-Einschränkung wurde entfernt. Da du Builder nutzt, 
+      // muss der gesamte Zustand (Library, Programme, Historie) gesichert werden.
     }
   )
 );
