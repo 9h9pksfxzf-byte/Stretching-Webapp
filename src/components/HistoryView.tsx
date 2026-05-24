@@ -13,7 +13,6 @@ export const HistoryView = () => {
     }
   };
 
-  // 1. Berechnungen für die aktuelle Woche basierend auf Zeitstempeln
   const getMsOfStartOfWeek = () => {
     const today = new Date();
     const day = today.getDay();
@@ -61,53 +60,66 @@ export const HistoryView = () => {
   const maxDayMinutes = Math.max(...dailyMinutes, 1);
 
   return (
-    <div className="flex flex-col text-white bg-[#0a0a0a] h-[100dvh] fixed inset-0 box-border overflow-hidden p-4 select-none">
+    <div className="flex flex-col text-slate-100 bg-gradient-to-b from-[#0d0f12] via-[#08090a] to-[#030405] h-[100dvh] fixed inset-0 box-border overflow-hidden p-5 select-none">
       
       {/* Header */}
       <div className="pt-4 pb-2 flex-shrink-0 flex justify-between items-center">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Dein Fortschritt</h1>
-          <p className="text-slate-400 text-xs">Wissenschaftliches Monitoring</p>
+          <h1 className="text-2xl font-extrabold tracking-tight bg-gradient-to-r from-white via-slate-200 to-slate-400 bg-clip-text text-transparent">
+            Dein Fortschritt
+          </h1>
+          <p className="text-emerald-400/80 font-medium text-[11px] tracking-wider uppercase mt-0.5">
+            Wissenschaftliches Monitoring
+          </p>
         </div>
         <button 
           onClick={handleReset}
-          className="bg-red-950/20 border border-red-900/30 text-red-400 text-[10px] px-2.5 py-1.5 rounded-lg font-bold uppercase tracking-wider active:bg-red-900/40"
+          className="bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 text-red-400 text-[10px] px-3 py-1.5 rounded-xl font-bold uppercase tracking-widest transition-all active:scale-95"
         >
           Reset
         </button>
       </div>
 
       {/* KPI Dashboard Grid */}
-      <div className="grid grid-cols-3 gap-2.5 my-3 flex-shrink-0">
-        <div className="bg-[#1a1a1a] border border-[#333] p-3 rounded-xl flex flex-col justify-between">
-          <span className="text-[10px] text-slate-400 font-medium uppercase tracking-wider">Umfang</span>
-          <span className="text-xl font-bold mt-1 text-emerald-400">{totalWeeklyMinutes} <span className="text-xs font-normal text-slate-400">Min</span></span>
-          <span className="text-[9px] text-slate-500 mt-0.5">Diese Woche</span>
+      <div className="grid grid-cols-3 gap-3 my-4 flex-shrink-0">
+        <div className="bg-white/[0.03] border border-white/[0.06] backdrop-blur-md p-3.5 rounded-2xl flex flex-col justify-between shadow-lg shadow-black/20">
+          <span className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">Umfang</span>
+          <span className="text-2xl font-black mt-1 text-emerald-400 drop-shadow-[0_0_10px_rgba(52,211,153,0.2)]">
+            {totalWeeklyMinutes}<span className="text-xs font-normal text-slate-400 ml-0.5">Min</span>
+          </span>
+          <span className="text-[9px] text-slate-500 mt-1 font-medium">Diese Woche</span>
         </div>
-        <div className="bg-[#1a1a1a] border border-[#333] p-3 rounded-xl flex flex-col justify-between">
-          <span className="text-[10px] text-slate-400 font-medium uppercase tracking-wider">Frequenz</span>
-          <span className="text-xl font-bold mt-1 text-sky-400">{totalWeeklySessions} <span className="text-xs font-normal text-slate-400">Slots</span></span>
-          <span className="text-[9px] text-slate-500 mt-0.5">Einheiten</span>
+        <div className="bg-white/[0.03] border border-white/[0.06] backdrop-blur-md p-3.5 rounded-2xl flex flex-col justify-between shadow-lg shadow-black/20">
+          <span className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">Frequenz</span>
+          <span className="text-2xl font-black mt-1 text-sky-400 drop-shadow-[0_0_10px_rgba(56,189,248,0.2)]">
+            {totalWeeklySessions}<span className="text-xs font-normal text-slate-400 ml-0.5">Slots</span>
+          </span>
+          <span className="text-[9px] text-slate-500 mt-1 font-medium">Einheiten</span>
         </div>
-        <div className="bg-[#1a1a1a] border border-[#333] p-3 rounded-xl flex flex-col justify-between">
-          <span className="text-[10px] text-slate-400 font-medium uppercase tracking-wider">Qualität</span>
-          <span className="text-xl font-bold mt-1 text-amber-400">{averageRating} <span className="text-xs font-normal text-slate-400">/10</span></span>
-          <span className="text-[9px] text-slate-500 mt-0.5">Ø Gefühl</span>
+        <div className="bg-white/[0.03] border border-white/[0.06] backdrop-blur-md p-3.5 rounded-2xl flex flex-col justify-between shadow-lg shadow-black/20">
+          <span className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">Qualität</span>
+          <span className="text-2xl font-black mt-1 text-amber-400 drop-shadow-[0_0_10px_rgba(251,191,36,0.2)]">
+            {averageRating}<span className="text-xs font-normal text-slate-400 ml-0.5">/10</span>
+          </span>
+          <span className="text-[9px] text-slate-500 mt-1 font-medium">Ø Gefühl</span>
         </div>
       </div>
 
       {/* Visueller Wochen-Trend */}
-      <div className="bg-[#1a1a1a] border border-[#333] p-3 rounded-xl flex flex-col flex-shrink-0 mb-3">
+      <div className="bg-white/[0.02] border border-white/[0.05] p-4 rounded-2xl flex flex-col flex-shrink-0 mb-4 shadow-inner">
         <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-4">Verteilung (Minuten)</span>
-        <div className="flex items-end justify-between h-20 px-2 pt-2">
+        <div className="flex items-end justify-between h-20 px-1 pt-2">
           {days.map((day, idx) => {
             const mins = dailyMinutes[idx];
             const heightPercent = (mins / maxDayMinutes) * 100;
             return (
-              <div key={idx} className="flex flex-col items-center gap-1.5 flex-1">
-                <span className="text-[9px] font-mono text-slate-400">{mins > 0 ? Math.round(mins) : ''}</span>
-                <div className="w-6 bg-slate-800 rounded-t-md relative h-12 overflow-hidden">
-                  <div style={{ height: `${heightPercent}%` }} className="w-full bg-emerald-500 absolute bottom-0 rounded-t-md transition-all duration-500" />
+              <div key={idx} className="flex flex-col items-center gap-2 flex-1">
+                <span className="text-[9px] font-mono font-bold text-slate-300">{mins > 0 ? Math.round(mins) : ''}</span>
+                <div className="w-7 bg-slate-900/60 border border-white/[0.03] rounded-full relative h-14 overflow-hidden shadow-inner">
+                  <div 
+                    style={{ height: `${heightPercent}%` }} 
+                    className="w-full bg-gradient-to-t from-emerald-600 to-emerald-400 absolute bottom-0 rounded-full transition-all duration-700 ease-out shadow-[0_0_8px_rgba(52,211,153,0.3)]"
+                  />
                 </div>
                 <span className="text-[10px] font-bold text-slate-500 mt-0.5">{day}</span>
               </div>
@@ -117,10 +129,12 @@ export const HistoryView = () => {
       </div>
 
       {/* Wissenschaftlicher Verletzungs-Check */}
-      <div className="bg-[#1a1a1a] border border-[#333] p-3 rounded-xl flex-shrink-0 mb-3">
+      <div className="bg-gradient-to-r from-emerald-950/20 to-transparent border border-emerald-500/10 p-4 rounded-2xl flex-shrink-0 mb-4">
         <div className="flex justify-between items-center mb-1.5">
-          <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Verletzungsrisiko-Index (ACWR)</span>
-          <span className="text-[10px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2 py-0.5 rounded-full font-bold">Optimal</span>
+          <span className="text-[10px] text-emerald-400 font-bold uppercase tracking-widest">Verletzungsrisiko-Index (ACWR)</span>
+          <span className="text-[9px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2 py-0.5 rounded-full font-extrabold tracking-wide">
+            Stabil
+          </span>
         </div>
         <p className="text-[11px] text-slate-400 leading-relaxed">
           Deine Trainingsbelastung verläuft stabil. Vermeide es, die wöchentlichen Minuten im Vergleich zur Vorwoche um mehr als **15 %** zu steigern, um Sehnenüberlastungen zu verhindern.
@@ -128,11 +142,13 @@ export const HistoryView = () => {
       </div>
 
       {/* Scrollbare Liste der letzten Sessions */}
-      <div className="flex-grow overflow-y-auto pr-0.5 space-y-2 mb-4">
-        <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider sticky top-0 bg-[#0a0a0a] py-1 block z-10">Letzte Aktivitäten</span>
+      <div className="flex-grow overflow-y-auto pr-0.5 space-y-2.5 mb-24 scrollbar-none">
+        <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider sticky top-0 bg-[#08090a] py-1 block z-10">
+          Letzte Aktivitäten
+        </span>
         
         {!history || history.length === 0 ? (
-          <div className="text-center text-xs text-slate-600 italic pt-6">Noch keine Daten aufgezeichnet.</div>
+          <div className="text-center text-xs text-slate-600 italic pt-8">Noch keine Daten aufgezeichnet.</div>
         ) : (
           history.slice().reverse().map((entry) => {
             const sessionMins = Math.round(((entry.completedExercises || []).reduce((sum, ex) => sum + (ex.duration || 0), 0)) / 60);
@@ -143,18 +159,20 @@ export const HistoryView = () => {
               <button 
                 key={entry.id} 
                 onClick={() => setSelectedSession(entry)}
-                className="w-full text-left bg-[#141414] border border-[#222] p-3 rounded-xl flex justify-between items-center active:bg-[#1a1a1a] transition-colors"
+                className="w-full text-left bg-white/[0.02] hover:bg-white/[0.04] border border-white/[0.05] p-3.5 rounded-2xl flex justify-between items-center active:scale-[0.99] transition-all shadow-sm"
               >
-                <div>
-                  <h4 className="text-xs font-bold text-slate-200 truncate max-w-[180px]">{entry.programName}</h4>
-                  <p className="text-[10px] text-slate-500 mt-0.5">{formattedDate}</p>
+                <div className="min-w-0 flex-1">
+                  <h4 className="text-sm font-bold text-slate-200 truncate pr-2">{entry.programName}</h4>
+                  <p className="text-[11px] font-mono text-slate-500 mt-0.5">{formattedDate}</p>
                 </div>
-                <div className="text-right flex items-center gap-2">
+                <div className="text-right flex items-center gap-3 shrink-0">
                   <div className="flex flex-col items-end">
-                    <span className="text-xs font-mono font-bold text-slate-300">{sessionMins} Min</span>
-                    <span className="text-[9px] text-slate-500">{(entry.completedExercises?.length || 0)} Übungen</span>
+                    <span className="text-sm font-mono font-black text-slate-200">{sessionMins}<span className="text-[10px] font-normal text-slate-400 ml-0.5">Min</span></span>
+                    <span className="text-[10px] font-medium text-slate-500">{(entry.completedExercises?.length || 0)} Übungen</span>
                   </div>
-                  <span className="text-slate-600 text-xs">➔</span>
+                  <div className="w-7 h-7 rounded-xl bg-white/[0.03] border border-white/[0.05] flex items-center justify-center text-slate-400 text-xs">
+                    ➔
+                  </div>
                 </div>
               </button>
             );
@@ -162,57 +180,69 @@ export const HistoryView = () => {
         )}
       </div>
 
-      {/* DETAIL MODAL (Overlay für die Zusammenfassung) */}
+      {/* DETAIL MODAL - Überarbeitet für ein nahtloses Premium-Erlebnis */}
       {selectedSession && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 animate-fadeIn">
-          <div className="bg-[#121212] border-t sm:border border-[#222] w-full max-w-lg rounded-t-2xl sm:rounded-2xl max-h-[85vh] flex flex-col text-left">
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-md z-50 flex items-end sm:items-center justify-center p-4 transition-all duration-300">
+          <div className="bg-[#0f1318]/90 border border-white/[0.08] w-full max-w-md rounded-2xl max-h-[75vh] flex flex-col text-left shadow-2xl shadow-black/80 animate-slideUp">
             
             {/* Modal Header */}
-            <div className="p-4 border-b border-[#222] flex justify-between items-center shrink-0">
+            <div className="p-4 border-b border-white/[0.06] flex justify-between items-center shrink-0">
               <div>
-                <h3 className="text-sm font-bold text-white">{selectedSession.programName}</h3>
-                <p className="text-[10px] text-slate-500 mt-0.5">
+                <h3 className="text-sm font-black text-white tracking-tight">{selectedSession.programName}</h3>
+                <p className="text-[10px] font-mono text-slate-400 mt-0.5">
                   {new Date(isNaN(Number(selectedSession.id)) ? Date.now() : Number(selectedSession.id)).toLocaleString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })} Uhr
                 </p>
               </div>
               <button 
                 onClick={() => setSelectedSession(null)}
-                className="bg-[#222] text-slate-400 text-xs font-bold px-3 py-1.5 rounded-lg active:bg-[#333]"
+                className="bg-white/[0.06] hover:bg-white/[0.1] text-slate-200 text-xs font-bold px-4 py-2 rounded-xl active:scale-95 transition-all border border-white/[0.04]"
               >
                 Schließen
               </button>
             </div>
 
-            {/* Modal Content (Scrollbare Liste der ausgeführten Übungen) */}
+            {/* Modal Content - Perfekt formatiert im transparenten Look */}
             <div className="p-4 overflow-y-auto space-y-3 flex-grow">
-              <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider block mb-1">Absolvierte Übungen</span>
+              <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest block mb-1">Absolvierte Übungen</span>
               
               {selectedSession.completedExercises?.map((ex, idx) => (
-                <div key={idx} className="bg-[#1a1a1a] border border-[#2a2a2a] p-3 rounded-xl flex flex-col gap-2">
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <h4 className="text-xs font-bold text-white">{ex.name}</h4>
+                <div key={idx} className="bg-white/[0.02] border border-white/[0.04] p-3.5 rounded-xl flex flex-col gap-2">
+                  <div className="flex justify-between items-center">
+                    <div className="min-w-0 flex-1">
+                      <h4 className="text-xs font-bold text-slate-200 truncate">{ex.name}</h4>
                       {ex.side && ex.side !== 'Beide' && (
-                        <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded mt-1 inline-block ${ex.side === 'Links' ? 'bg-teal-950 text-teal-400 border border-teal-900' : 'bg-indigo-950 text-indigo-400 border border-indigo-900'}`}>
-                          Seite: {ex.side}
+                        <span className={`text-[9px] font-extrabold px-2 py-0.5 rounded-md mt-1 inline-block tracking-wider uppercase ${
+                          ex.side === 'Links' 
+                            ? 'bg-teal-500/10 text-teal-300 border border-teal-500/20' 
+                            : 'bg-indigo-500/10 text-indigo-300 border border-indigo-500/20'
+                        }`}>
+                          {ex.side}
                         </span>
                       )}
                     </div>
-                    <div className="text-right shrink-0">
-                      <span className="text-xs font-mono font-bold text-slate-300">{ex.duration ? `${ex.duration}s` : '---'}</span>
+                    <div className="text-right shrink-0 ml-3">
+                      <span className="text-xs font-mono font-bold bg-white/[0.04] px-2 py-1 rounded-lg border border-white/[0.04] text-slate-300">
+                        {ex.duration ? `${ex.duration}s` : '---'}
+                      </span>
                     </div>
                   </div>
 
                   {/* Intensitäts- / Schmerz-Indikator */}
-                  <div className="flex items-center gap-2 pt-1 border-t border-[#222] mt-1">
-                    <span className="text-[9px] text-slate-500 font-medium uppercase">Intensität:</span>
-                    <div className="flex-grow bg-slate-800 h-1.5 rounded-full overflow-hidden relative">
+                  <div className="flex items-center gap-2.5 pt-2 border-t border-white/[0.04] mt-0.5">
+                    <span className="text-[9px] text-slate-400 font-semibold uppercase tracking-wider">Intensität:</span>
+                    <div className="flex-grow bg-slate-950 h-1.5 rounded-full overflow-hidden relative border border-white/[0.01]">
                       <div 
                         style={{ width: `${(ex.executionRating / 10) * 100}%` }}
-                        className={`h-full rounded-full ${ex.executionRating <= 3 ? 'bg-emerald-500' : ex.executionRating <= 7 ? 'bg-amber-500' : 'bg-red-500'}`}
+                        className={`h-full rounded-full transition-all duration-500 ${
+                          ex.executionRating <= 3 
+                            ? 'bg-gradient-to-r from-emerald-500 to-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.3)]' 
+                            : ex.executionRating <= 7 
+                            ? 'bg-gradient-to-r from-amber-500 to-amber-400 shadow-[0_0_6px_rgba(251,191,36,0.3)]' 
+                            : 'bg-gradient-to-r from-red-500 to-rose-400 shadow-[0_0_6px_rgba(244,63,94,0.3)]'
+                        }`}
                       />
                     </div>
-                    <span className="text-[10px] font-mono font-bold text-slate-300">{ex.executionRating}/10</span>
+                    <span className="text-[10px] font-mono font-black text-slate-400 w-6 text-right">{ex.executionRating}/10</span>
                   </div>
                 </div>
               ))}
