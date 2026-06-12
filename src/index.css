@@ -1,13 +1,10 @@
-/* Modern Reset & Base Variable Setup */
 :root {
-  --bg-primary: #121212;
-  --bg-surface: #1e1e1e;
-  --bg-element: #2d2d2d;
-  --color-text-main: #ffffff;
-  --color-text-muted: #a0a0a0;
-  --color-primary: #03dac6;
-  --color-secondary: #bb86fc;
-  --color-error: #cf6679;
+  --bg-dark: #0f0f11;
+  --bg-card: #16161a;
+  --primary: #03dac6;
+  --text-main: #ffffff;
+  --text-muted: #8e8e93;
+  --error: #ff453a;
 }
 
 * {
@@ -17,174 +14,117 @@
 }
 
 body {
-  background-color: var(--bg-primary);
-  color: var(--color-text-main);
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  background-color: var(--bg-dark);
+  color: var(--text-main);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   -webkit-font-smoothing: antialiased;
-  padding: 0;
-  margin: 0;
 }
 
-/* App Layout */
-.app-container {
+/* Container für die gesamte App auf dem Smartphone */
+.mobile-app-layout {
+  max-width: 480px;
+  margin: 0 auto;
   min-height: 100vh;
   display: flex;
   flex-direction: column;
+  background-color: var(--bg-dark);
 }
 
-.navbar {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 16px 24px;
-  background-color: var(--bg-surface);
-  border-bottom: 1px solid #2e2e2e;
+/* Header */
+.app-header {
+  padding: 20px;
+  border-bottom: 1px solid #222;
+  text-align: center;
 }
 
-.nav-brand {
-  font-size: 18px;
-  fontWeight: 800;
+.app-title {
+  font-size: 20px;
+  font-weight: 800;
   letter-spacing: 1px;
 }
 
-.nav-badge {
-  background-color: var(--bg-element);
-  padding: 6px 12px;
-  border-radius: 6px;
-  font-size: 12px;
-  color: var(--color-primary);
-}
-
-.main-content {
-  padding: 20px;
-  max-width: 1200px;
-  margin: 0 auto;
-  width: 100%;
+/* Trainings-Ansicht (Vollbild Fokus) */
+.workout-screen {
+  flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 32px;
+  justify-content: space-between;
+  padding: 40px 24px;
+  text-align: center;
 }
 
-/* Grids & Cards */
-.section-title {
-  font-size: 18px;
-  margin-bottom: 16px;
-  color: var(--color-text-main);
+.workout-progress {
+  font-size: 14px;
+  color: var(--text-muted);
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 1px;
 }
 
-.program-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  gap: 16px;
-  width: 100%;
+.current-exercise-name {
+  font-size: 36px;
+  font-weight: 700;
+  margin-top: 20px;
 }
 
-.card {
-  background-color: var(--bg-surface);
-  border: 1px solid #2e2e2e;
-  border-radius: 12px;
-  padding: 20px;
-  width: 100%;
+.timer-circle {
+  width: 240px;
+  height: 240px;
+  border: 8px solid #222;
+  border-top-color: var(--primary);
+  border-radius: 50%;
+  margin: 40px auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
-/* List Items */
-.list-container {
+.timer-text {
+  font-size: 72px;
+  font-weight: 800;
+  color: var(--primary);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Programmauswahl (Startbildschirm) */
+.selection-screen {
+  padding: 24px;
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  margin-top: 16px;
+  gap: 16px;
 }
 
-.list-item {
+.program-card {
+  background-color: var(--bg-card);
+  border: 1px solid #2c2c2e;
+  border-radius: 14px;
+  padding: 20px;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  background-color: var(--bg-element);
-  padding: 12px 16px;
-  border-radius: 8px;
-  border: 1px solid #3d3d3d;
 }
 
-.item-name {
-  font-size: 15px;
-  font-weight: 600;
+.program-info h3 {
+  font-size: 18px;
+  margin-bottom: 4px;
 }
 
-.item-meta {
-  font-size: 12px;
-  color: var(--color-text-muted);
-  margin-top: 2px;
-}
-
-/* Forms & Inputs */
-.form-group {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  margin-bottom: 16px;
-}
-
-.form-row {
-  display: flex;
-  gap: 12px;
-}
-
-label {
-  font-size: 11px;
-  color: var(--color-text-muted);
-  font-weight: bold;
-  text-transform: uppercase;
-}
-
-input, select {
-  width: 100%;
-  background-color: var(--bg-element);
-  border: 1px solid #404040;
-  border-radius: 6px;
-  padding: 12px;
-  color: #fff;
+.program-info p {
   font-size: 14px;
-  outline: none;
+  color: var(--text-muted);
 }
 
-input:focus, select:focus {
-  border-color: var(--color-primary);
-}
-
-/* Buttons */
-.btn {
-  padding: 12px 16px;
-  font-size: 14px;
-  font-weight: bold;
+/* Globale Buttons */
+.action-button {
+  padding: 16px 24px;
+  font-size: 16px;
+  font-weight: 700;
   border: none;
-  border-radius: 6px;
+  border-radius: 12px;
   cursor: pointer;
-  text-align: center;
   width: 100%;
 }
 
-.btn-primary { background-color: var(--color-primary); color: #000; }
-.btn-secondary { background-color: var(--color-secondary); color: #000; }
-.btn-outline-danger { 
-  background-color: transparent; 
-  border: 1px solid var(--color-error); 
-  color: var(--color-error);
-  width: auto;
-  padding: 6px 12px;
-  font-size: 12px;
-}
-
-/* Responsive Dashboard Layout Split */
-.dashboard-layout {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 24px;
-}
-
-@media (min-width: 768px) {
-  .dashboard-layout {
-    grid-template-columns: 1fr 1fr;
-  }
-}
+.btn-start { background-color: var(--primary); color: #000; }
+.btn-pause { background-color: #ff9f0a; color: #000; }
+.btn-stop { background-color: rgba(255, 69, 58, 0.1); color: var(--error); margin-top: 12px; }
+.btn-select { background-color: #2c2c2e; color: #fff; width: auto; padding: 10px 20px; }
