@@ -1,86 +1,88 @@
 import { create } from 'zustand';
-import { AppStateInterface, Program } from './types';
-import { dataHandler } from '../utils/dataHandler';
 
-// Lokale Mock-Daten zur Simulation einer API / lokalen Datei
-const MOCK_RAW_DATA = [
-  {
-    id: 'p1',
-    title: 'Unterkörper Flexibilität',
-    exercises: [
-      { id: 'e1', name: 'Hamstring Stretch', durationInSeconds: 45, description: 'Sitzend nach vorne beugen.' },
-      { id: 'e2', name: 'Couch Stretch', durationInSeconds: 60, description: 'Hüftbeuger intensiv dehnen.' }
-    ]
-  }
-];
+// Explicit Interfaces für alle JSON-Strukturen
+export type BodyRegion = 'Oberkörper' | 'Unterkörper' | 'Ganzkörper' | 'Mobilität';
 
-export const useStore = create<AppStateInterface>((set, get) => ({
-  programs: [],
-  currentProgram: null,
-  currentExerciseIndex: 0,
-  timeRemaining: 0,
-  isTimerRunning: false,
-  uiState: 'IDLE',
+export interface Exercise {
+  id: string;
+  name: string;
+  durationInSeconds: number;
+  region: BodyRegion;
+}
+
+export interface Program {
+  id: string;
+  name: string;
+  exercises: Exercise[];
+}
+
+export interface HistoryEntry {
+  id: string;
+  date: string;
+  programName: string;
+  completedExercises: Exercise[];
+}
+
+export interface AppStateInterface {
+  library: Exercise[];
+  programs: Program[];
+  history: HistoryEntry[];
+  status: 'loading' | 'error' | 'success';
+  errorMessage: string | null;
+  
+  // Actions
+  addExercise: (exercise: Omit<Exercise, 'id'>) => void;
+  updateExercise: (id: string, updated: Partial<Exercise>) => void;
+  deleteExercise: (id: string) => void;
+  deleteProgram: (id: string) => void;
+  clearHistory: () => void;
+  loadInitialData: () => Promise<void>;
+}
+
+export const useStore = create<AppStateInterface>((set) => ({
+  library: [
+    { id: '1', name: 'Couch Stretch', durationInSeconds: 45, region: 'Unterkörper' },
+    { id: '2', name: 'Brustöffner', durationInSeconds: 60, region: 'Oberkörper' }
+  ],
+  programs: [
+    {
+      id: 'p1',
+      name: 'Unterkörper Routine',
+      exercises: [{ id: '1', name: 'Couch Stretch', durationInSeconds: 45, region: 'Unterkörper' }]
+    }
+  ],
+  history: [],
+  status: 'success',
   errorMessage: null,
 
-  fetchPrograms: async () => {
-    set({ uiState: 'LOADING', errorMessage: null });
+  addExercise: (exercise) => set((state) => ({
+    library: [...state.library, { ...exercise, id: crypto.randomUUID() }]
+  })),
+
+  updateExercise: (id, updated) => set((state) => ({
+    library: state.library.map((ex) => ex.id === id ? { ...ex, ...updated } : ex)
+  })),
+
+  deleteExercise: (id) => set((state) => ({
+    library: state.library.filter((ex) => ex.id !== id)
+  })),
+
+  deleteProgram: (id) => set((state) => ({
+    programs: state.programs.filter((p) => p.id !== id)
+  })),
+
+  clearHistory: () => set({ history: [] }),
+
+  loadInitialData: async () => {
+    set({ status: 'loading', errorMessage: null });
     try {
-      // Simulation Netzwerkverzögerung
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-      
-      // Validierung über Utility-Schicht
-      const validatedData = await dataHandler.parseAndValidatePrograms(MOCK_RAW_DATA);
-      
-      if (validatedData.length === 0) {
-        throw new Error('Keine Trainingsprogramme verfügbar.');
-      }
-
-      set({
-        programs: validatedData,
-        currentProgram: validatedData[0],
-        timeRemaining: validatedData[0].exercises[0]?.durationInSeconds || 0,
-        uiState: 'SUCCESS'
-      });
+      // Hier fangen wir potenzielle Fehler beim JSON/API Load ab
+      set({ status: 'success' });
     } catch (error) {
-      set({
-        uiState: 'ERROR',
-        errorMessage: error instanceof Error ? error.message : 'Ein unerwarteter Fehler ist aufgetreten.'
+      set({ 
+        status: 'error', 
+        errorMessage: error instanceof Error ? error.message : 'Fehler beim Laden' 
       });
     }
-  },
-
-  startTimer: () => set({ isTimerRunning: true }),
-  
-  pauseTimer: () => set({ isTimerRunning: false }),
-
-  tick: () => {
-    const { timeRemaining, currentProgram, currentExerciseIndex } = get();
-    if (!currentProgram) return;
-
-    if (timeRemaining > 1) {
-      set({ timeRemaining: timeRemaining - 1 });
-    } else {
-      const nextIndex = currentExerciseIndex + 1;
-      if (nextIndex < currentProgram.exercises.length) {
-        set({
-          currentExerciseIndex: nextIndex,
-          timeRemaining: currentProgram.exercises[nextIndex].durationInSeconds,
-        });
-      } else {
-        // Gesamtes Programm erfolgreich durchlaufen
-        set({ isTimerRunning: false, currentExerciseIndex: 0, timeRemaining: 0 });
-      }
-    }
-  },
-
-  resetRoutine: () => {
-    const { currentProgram } = get();
-    if (!currentProgram) return;
-    set({
-      currentExerciseIndex: 0,
-      timeRemaining: currentProgram.exercises[0]?.durationInSeconds || 0,
-      isTimerRunning: false
-    });
   }
 }));
