@@ -1,120 +1,71 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useTimer } from '../hooks/useTimer';
+import { useStore } from '../store/useStore';
 
 interface RoutineRunnerProps {
   programId: string;
   onClose: () => void;
 }
 
-export const RoutineRunner: React.FC<RoutineRunnerProps> = ({ onClose }) => {
-  const { seconds, isActive, start, pause, reset } = useTimer(45, () => {
-    onClose();
-  });
+export const RoutineRunner: React.FC<RoutineRunnerProps> = ({ programId, onClose }) => {
+  const { programs } = useStore();
+  const program = programs.find((p) => p.id === programId);
+  
+  const [currentIndex, setCurrentIndex] = useState<number>(0);
+
+  if (!program || program.exercises.length === 0) {
+    return (
+      <div className="workout-screen">
+        <p>Keine Übungen in diesem Programm gefunden.</p>
+        <button className="action-button btn-stop" onClick={onClose}>Zurück</button>
+      </div>
+    );
+  }
+
+  const currentExercise = program.exercises[currentIndex];
+
+  // Timer initialisieren mit der Dauer der aktuellen Übung
+  const { seconds, isActive, start, pause } = useTimer(
+    currentExercise.durationInSeconds, 
+    () => {
+      // Callback bei Ablauf der Zeit: Nächste Übung laden oder beenden
+      if (currentIndex + 1 < program.exercises.length) {
+        setCurrentIndex((prev) => prev + 1);
+      } else {
+        alert('Training erfolgreich beendet! 🎉');
+        onClose();
+      }
+    }
+  );
 
   return (
-    <div style={styles.fullscreenOverlay}>
-      <div style={styles.runnerCard}>
-        <span style={styles.badge}>Aktivität läuft</span>
-        <h2 style={styles.title}>Couch Stretch</h2>
-        
-        <div style={styles.timerContainer}>
-          <div style={styles.timerDisplay}>{seconds}</div>
-          <span style={styles.unit}>Sekunden verbleibend</span>
+    <div className="workout-screen">
+      <div>
+        <div className="workout-progress">
+          Übung {currentIndex + 1} von {program.exercises.length}
         </div>
+        <h1 className="current-exercise-name">{currentExercise.name}</h1>
+        <p style={{ color: '#8e8e93', marginTop: '4px' }}>Fokus: {currentExercise.region}</p>
+      </div>
+
+      {/* Zentrierter funktionaler Timer */}
+      <div className="timer-circle" style={{ borderColor: isActive ? '#03dac6' : '#222' }}>
+        <div className="timer-text">{seconds}s</div>
+      </div>
+
+      {/* Steuerungselemente direkt im Daumenbereich des Nutzers */}
+      <div>
+        <button 
+          className={`action-button ${isActive ? 'btn-pause' : 'btn-start'}`} 
+          onClick={isActive ? pause : start}
+        >
+          {isActive ? 'Pause' : 'Start Übung'}
+        </button>
         
-        <div style={styles.buttonGroup}>
-          <button 
-            style={{ ...styles.btn, ...(isActive ? styles.btnPause : styles.btnStart) }} 
-            onClick={isActive ? pause : start}
-          >
-            {isActive ? 'Pause' : 'Start'}
-          </button>
-          
-          <button style={{ ...styles.btn, ...styles.btnSecondary }} onClick={reset}>
-            Reset
-          </button>
-          
-          <button style={{ ...styles.btn, ...styles.btnDanger }} onClick={onClose}>
-            Beenden
-          </button>
-        </div>
+        <button className="action-button btn-stop" onClick={onClose}>
+          Training abbrechen
+        </button>
       </div>
     </div>
   );
-};
-
-const styles = {
-  fullscreenOverlay: {
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'rgba(10, 10, 10, 0.95)',
-    position: 'fixed' as const,
-    top: 0,
-    left: 0,
-    width: '100vw',
-    height: '100vh',
-    zIndex: 1000,
-    backdropFilter: 'blur(8px)'
-  },
-  runnerCard: {
-    backgroundColor: '#1a1a1a',
-    border: '1px solid #2e2e2e',
-    borderRadius: '16px',
-    padding: '40px',
-    textAlign: 'center' as const,
-    boxShadow: '0 20px 40px rgba(0,0,0,0.5)',
-    width: '100%',
-    maxWidth: '450px'
-  },
-  badge: {
-    backgroundColor: 'rgba(3, 218, 198, 0.1)',
-    color: '#03dac6',
-    padding: '6px 12px',
-    borderRadius: '20px',
-    fontSize: '12px',
-    fontWeight: 'bold' as const,
-    textTransform: 'uppercase' as const,
-    letterSpacing: '1px'
-  },
-  title: {
-    fontSize: '32px',
-    margin: '20px 0 10px 0',
-    color: '#ffffff',
-    fontWeight: 700
-  },
-  timerContainer: {
-    margin: '40px 0'
-  },
-  timerDisplay: {
-    fontSize: '120px',
-    fontWeight: 800,
-    color: '#03dac6',
-    lineHeight: '1',
-    fontVariantNumeric: 'tabular-nums'
-  },
-  unit: {
-    color: '#a0a0a0',
-    fontSize: '14px',
-    display: 'block',
-    marginTop: '10px'
-  },
-  buttonGroup: {
-    display: 'flex',
-    flexDirection: 'column' as const,
-    gap: '12px'
-  },
-  btn: {
-    padding: '14px',
-    fontSize: '16px',
-    fontWeight: 'bold' as const,
-    border: 'none',
-    borderRadius: '8px',
-    cursor: 'pointer',
-    transition: 'all 0.2s ease'
-  },
-  btnStart: { backgroundColor: '#03dac6', color: '#000000' },
-  btnPause: { backgroundColor: '#ffb74d', color: '#000000' },
-  btnSecondary: { backgroundColor: '#2e2e2e', color: '#ffffff' },
-  btnDanger: { backgroundColor: '#cf6679', color: '#ffffff' }
 };
