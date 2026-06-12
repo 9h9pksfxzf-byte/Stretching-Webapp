@@ -1,65 +1,71 @@
 import React, { useState } from 'react';
-import { useStore, Exercise } from './store/useStore';
-import { ProgramGrid } from './components/ProgramGrid';
-import { ExerciseBuilder } from './components/ExerciseBuilder';
-import { HistoryView } from './components/HistoryView';
-import { RoutineRunner } from './components/RoutineRunner';
+import { useTimer } from '../hooks/useTimer';
+import { useStore } from '../store/useStore';
 
-export const App: React.FC = () => {
-  const { library, deleteExercise, status, errorMessage } = useStore();
-  const [activeProgramId, setActiveProgramId] = useState<string | null>(null);
+interface RoutineRunnerProps {
+  programId: string;
+  onClose: () => void;
+}
 
-  if (status === 'loading') return <div style={{ padding: '40px', textAlign: 'center' }}>Lädt...</div>;
-  if (status === 'error') return <div style={{ padding: '40px', color: '#cf6679' }}>Fehler: {errorMessage}</div>;
+export const RoutineRunner: React.FC<RoutineRunnerProps> = ({ programId, onClose }) => {
+  const { programs } = useStore();
+  const program = programs.find((p) => p.id === programId);
+  
+  const [currentIndex, setCurrentIndex] = useState<number>(0);
+
+  if (!program || program.exercises.length === 0) {
+    return (
+      <div className="workout-screen">
+        <p>Keine Übungen in diesem Programm gefunden.</p>
+        <button className="action-button btn-stop" onClick={onClose}>Zurück</button>
+      </div>
+    );
+  }
+
+  const currentExercise = program.exercises[currentIndex];
+
+  // Timer initialisieren mit der Dauer der aktuellen Übung
+  const { seconds, isActive, start, pause } = useTimer(
+    currentExercise.durationInSeconds, 
+    () => {
+      // Callback bei Ablauf der Zeit: Nächste Übung laden oder beenden
+      if (currentIndex + 1 < program.exercises.length) {
+        setCurrentIndex((prev) => prev + 1);
+      } else {
+        alert('Training erfolgreich beendet! 🎉');
+        onClose();
+      }
+    }
+  );
 
   return (
-    <div className="app-container">
-      <nav className="navbar">
-        <div className="nav-brand">FLEX<span style={{ color: '#03dac6', fontWeight: 'bold' }}>FLOW</span></div>
-        <div className="nav-badge">{library.length} Übungen gelistet</div>
-      </nav>
-
-      <main className="main-content">
-        <section>
-          <h2 className="section-title">Stretching Programme</h2>
-          <ProgramGrid onSelectProgram={(id: string) => setActiveProgramId(id)} />
-        </section>
-
-        <div className="dashboard-layout">
-          {/* Linke Spalte */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-            <ExerciseBuilder />
-            
-            <div className="card">
-              <h3 style={{ fontSize: '16px', marginBottom: '12px' }}>Bibliotheksverwaltung</h3>
-              <div className="list-container">
-                {library.map((ex: Exercise) => (
-                  <div key={ex.id} className="list-item">
-                    <div>
-                      <div className="item-name">{ex.name}</div>
-                      <div className="item-meta">{ex.region} • {ex.durationInSeconds}s</div>
-                    </div>
-                    <button className="btn-outline-danger" onClick={() => deleteExercise(ex.id)}>
-                      Löschen
-                    </button>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          {/* Rechte Spalte */}
-          <div>
-            <HistoryView />
-          </div>
+    <div className="workout-screen">
+      <div>
+        <div className="workout-progress">
+          Übung {currentIndex + 1} von {program.exercises.length}
         </div>
-      </main>
+        <h1 className="current-exercise-name">{currentExercise.name}</h1>
+        <p style={{ color: '#8e8e93', marginTop: '4px' }}>Fokus: {currentExercise.region}</p>
+      </div>
 
-      {activeProgramId && (
-        <RoutineRunner programId={activeProgramId} onClose={() => setActiveProgramId(null)} />
-      )}
+      {/* Zentrierter funktionaler Timer */}
+      <div className="timer-circle" style={{ borderColor: isActive ? '#03dac6' : '#222' }}>
+        <div className="timer-text">{seconds}s</div>
+      </div>
+
+      {/* Steuerungselemente direkt im Daumenbereich des Nutzers */}
+      <div>
+        <button 
+          className={`action-button ${isActive ? 'btn-pause' : 'btn-start'}`} 
+          onClick={isActive ? pause : start}
+        >
+          {isActive ? 'Pause' : 'Start Übung'}
+        </button>
+        
+        <button className="action-button btn-stop" onClick={onClose}>
+          Training abbrechen
+        </button>
+      </div>
     </div>
   );
 };
-
-export default App;
