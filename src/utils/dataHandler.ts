@@ -1,29 +1,37 @@
-import { useStore } from '../store/useStore';
+import { Program } from '../store/types';
 
-export const exportData = () => {
-  const state = useStore.getState();
-  const data = JSON.stringify({ library: state.library, programs: state.programs });
-  const blob = new Blob([data], { type: 'application/json' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `stretching-backup-${new Date().toISOString().slice(0, 10)}.json`;
-  a.click();
-  URL.revokeObjectURL(url);
-};
-
-export const importData = (file: File) => {
-  const reader = new FileReader();
-  reader.onload = (e) => {
-    try {
-      const content = JSON.parse(e.target?.result as string);
-      if (content.library && content.programs) {
-        useStore.setState({ library: content.library, programs: content.programs });
-        alert('Daten erfolgreich importiert!');
-      }
-    } catch (err) {
-      alert('Fehler beim Importieren der Datei.');
+export const dataHandler = {
+  /**
+   * Lädt die Programme und validiert die Struktur.
+   * Typisierung stellt sicher, dass das zurückgegebene Objekt exakt dem Program-Interface entspricht.
+   */
+  parseAndValidatePrograms: async (rawResponse: unknown): Promise<Program[]> => {
+    if (!Array.isArray(rawResponse)) {
+      throw new Error('Ungültiges Datenformat: Erwartete ein Array von Programmen.');
     }
-  };
-  reader.readAsText(file);
+
+    return rawResponse.map((item: any, index: number) => {
+      if (!item.id || !item.title || !Array.isArray(item.exercises)) {
+        throw new Error(`Kritischer Datenfehler in Programm-Index ${index}: Pflichtfelder fehlen.`);
+      }
+
+      const validatedExercises = item.exercises.map((ex: any, exIndex: number) => {
+        if (!ex.id || !ex.name || typeof ex.durationInSeconds !== 'number') {
+          throw new Error(`Fehler in Programm "${item.title}" bei Übung ${exIndex + 1}: Ungültige Dauer oder ID.`);
+        }
+        return {
+          id: String(ex.id),
+          name: String(ex.name),
+          durationInSeconds: Number(ex.durationInSeconds),
+          description: ex.description ? String(ex.description) : '',
+        };
+      });
+
+      return {
+        id: String(item.id),
+        title: String(item.title),
+        exercises: validatedExercises,
+      };
+    });
+  }
 };
