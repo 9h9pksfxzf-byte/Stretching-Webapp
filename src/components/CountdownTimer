@@ -1,26 +1,13 @@
 import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
-import { useStore } from '../store/useStore';
 
-export const CountdownTimer: React.FC = () => {
-  const timeRemaining = useStore((state) => state.timeRemaining);
+interface CountdownTimerProps {
+  seconds: number;
+}
 
+export const CountdownTimer: React.FC<CountdownTimerProps> = ({ seconds }) => {
   return (
-    <View style={styles.timerContainer}>
-      <Text style={styles.timerText}>{timeRemaining}s</Text>
-    </View>
+    <div style={{ fontSize: '48px', fontWeight: 'bold', color: '#03dac6' }}>
+      {seconds}s
+    </div>
   );
 };
-
-const styles = StyleSheet.create({
-  timerContainer: {
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginVertical: 30,
-  },
-  timerText: {
-    fontSize: 72,
-    fontWeight: '800',
-    color: '#007AFF',
-  },
-});
