@@ -1,182 +1,26 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React from 'react';
+import { StyleSheet, Text, View } from 'react-native';
+import { useStore } from '../store/useStore';
 
-interface CountdownTimerProps {
-  initialDuration: number; // Gesamtdauer der Übung in Sekunden
-  onComplete?: () => void;
-}
-
-export const CountdownTimer: React.FC<CountdownTimerProps> = ({
-  initialDuration,
-  onComplete,
-}) => {
-  const [timeLeft, setTimeLeft] = useState<number>(initialDuration);
-  const [isActive, setIsActive] = useState<boolean>(false);
-  
-  // Wir speichern den Context in einer Ref, initialisieren ihn aber absolut restriktiv
-  const audioCtxRef = useRef<AudioContext | null>(null);
-
-  // Synthetisiert einen Ton mit definierter Frequenz, Dauer und Lautstärken-Hüllkurve
-  const playTone = (frequency: number, duration: number, type: 'sine' | 'square' = 'sine') => {
-    try {
-      // Falls der Context noch nicht existiert (oder durch iOS suspendiert wurde), jetzt erzwingen
-      if (!audioCtxRef.current) {
-        audioCtxRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
-      }
-      
-      const ctx = audioCtxRef.current;
-      
-      // iOS Absicherung: Wenn der Context schläft, reaktivieren
-      if (ctx.state === 'suspended') {
-        ctx.resume();
-      }
-
-      const oscillator = ctx.createOscillator();
-      const gainNode = ctx.createGain();
-
-      oscillator.type = type;
-      oscillator.frequency.setValueAtTime(frequency, ctx.currentTime);
-
-      // Linearer Lautstärkenabfall, um Knackgeräusche zu verhindern
-      gainNode.gain.setValueAtTime(0.2, ctx.currentTime); 
-      gainNode.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + duration);
-
-      oscillator.connect(gainNode);
-      gainNode.connect(ctx.destination);
-
-      oscillator.start(ctx.currentTime);
-      oscillator.stop(ctx.currentTime + duration);
-    } catch (error) {
-      console.warn("Audio-Wiedergabe im Hintergrund blockiert:", error);
-    }
-  };
-
-  useEffect(() => {
-    let timerId: NodeJS.Timeout;
-
-    if (isActive && timeLeft > 0) {
-      timerId = setTimeout(() => {
-        const nextTime = timeLeft - 1;
-        
-        // Signal-Logik für die letzten 3 Sekunden
-        if (nextTime === 3 || nextTime === 2 || nextTime === 1) {
-          playTone(880, 0.1, 'sine');
-        } else if (nextTime === 0) {
-          playTone(440, 0.4, 'square');
-          setIsActive(false);
-          if (onComplete) onComplete();
-        }
-
-        setTimeLeft(nextTime);
-      }, 1000);
-    }
-
-    return () => clearTimeout(timerId);
-  }, [timeLeft, isActive]);
-
-  const handleStartStop = () => {
-    // Absolut kritisch für iOS: Initialisierung und Erzeugung MUSS hier im Klick-Event synchron geschehen
-    if (!audioCtxRef.current) {
-      audioCtxRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
-    }
-    
-    if (audioCtxRef.current.state === 'suspended') {
-      audioCtxRef.current.resume();
-    }
-
-    // Wenn der Timer gestartet wird, triggern wir SOFORT synchron im Klick-Event einen hörbaren,
-    // aber extrem kurzen "Freischalt-Ton". Das entsperrt die iOS-Audio-Engine dauerhaft.
-    if (!isActive) {
-      playTone(1200, 0.05, 'sine'); // Ein ganz kurzer, knackiger Bestätigungston beim Starten
-    }
-
-    setIsActive(!isActive);
-  };
-
-  const handleReset = () => {
-    setIsActive(false);
-    setTimeLeft(initialDuration);
-  };
-
-  const formatTime = (seconds: number): string => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-  };
-
-  const isCriticalZone = timeLeft <= 3 && timeLeft > 0;
+export const CountdownTimer: React.FC = () => {
+  const timeRemaining = useStore((state) => state.timeRemaining);
 
   return (
-    <div style={styles.container}>
-      <div style={{ 
-        ...styles.timerDisplay, 
-        ...(isCriticalZone ? styles.criticalText : {}) 
-      }}>
-        {formatTime(timeLeft)}
-      </div>
-      
-      {isCriticalZone && (
-        <div style={styles.alertNotice}>
-          Nächste Übung in {timeLeft} ...
-        </div>
-      )}
-
-      <div style={styles.buttonContainer}>
-        <button onClick={handleStartStop} style={styles.button}>
-          {isActive ? 'Pause' : 'Start'}
-        </button>
-        <button onClick={handleReset} style={{ ...styles.button, ...styles.resetButton }}>
-          Reset
-        </button>
-      </div>
-    </div>
+    <View style={styles.timerContainer}>
+      <Text style={styles.timerText}>{timeRemaining}s</Text>
+    </View>
   );
 };
 
-const styles = {
-  container: {
-    display: 'flex',
-    flexDirection: 'column' as const,
+const styles = StyleSheet.create({
+  timerContainer: {
+    justifyContent: 'center',
     alignItems: 'center',
-    padding: '20px',
-    background: '#1a1a1a',
-    borderRadius: '12px',
-    width: '280px',
-    margin: '20px auto',
-    boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+    marginVertical: 30,
   },
-  timerDisplay: {
-    fontSize: '48px',
-    fontWeight: 'bold' as const,
-    fontFamily: 'monospace',
-    color: '#00e676',
-    transition: 'color 0.2s ease',
+  timerText: {
+    fontSize: 72,
+    fontWeight: '800',
+    color: '#007AFF',
   },
-  criticalText: {
-    color: '#ff1744', 
-    transform: 'scale(1.05)',
-  },
-  alertNotice: {
-    color: '#ff1744',
-    fontSize: '14px',
-    marginTop: '8px',
-    fontWeight: 'bold' as const,
-  },
-  buttonContainer: {
-    display: 'flex',
-    gap: '12px',
-    marginTop: '20px',
-  },
-  button: {
-    padding: '10px 20px',
-    fontSize: '16px',
-    fontWeight: 'bold' as const,
-    border: 'none',
-    borderRadius: '6px',
-    cursor: 'pointer',
-    background: '#2979ff',
-    color: '#fff',
-  },
-  resetButton: {
-    background: '#555',
-  }
-};
+});
